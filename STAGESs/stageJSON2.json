@@ -1,10 +1,10 @@
 {
     "stage1": {
-        "auther" : "8128",
+        "auther": "8128",
         "difficulty": 1
     },
     "stage2": {
-        "auther" : "1234",
+        "auther": "1234",
         "difficulty": 20
     }
 }

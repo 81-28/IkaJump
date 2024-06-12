@@ -4,8 +4,8 @@ import processing.sound.*;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Set;
-import java.util.List;
-import java.util.Map;
+// import java.util.List;
+// import java.util.Map;
 
 HashMap<String, SoundFile> sounds = new HashMap<String, SoundFile>();
 HashMap<String, PImage> images = new HashMap<String, PImage>();
@@ -13,6 +13,9 @@ JSONArray stages;
 // ↓なぜかグローバルだと上手くいかない
 // String folderPath = sketchPath("STAGESs");
 JSONObject stagess = new JSONObject();
+JSONArray allStages = new JSONArray();
+ArrayList<String> jsonNames = new ArrayList<String>();
+ArrayList<String> stageNames = new ArrayList<String>();
 
 int fps = 60;
 int waitFrame = 0;
@@ -26,7 +29,12 @@ float baseY = totalHeight - sketchHeight;
 int ballSize = 40;
 int blockSize = ballSize/2;
 
-String scene = "pause";
+final int GAME = 0;
+final int PAUSE = 1;
+final int GOAL = 2;
+final int DEAD = 3;
+int scene = PAUSE;
+
 int stageNum = 0;
 int maxStageNum = 0;
 int baseJumpCount = 1;
@@ -64,6 +72,14 @@ void loadJSONs() {
         // String savePath = folderPath + "/merged.json";
         // saveJSONObject(stagess, savePath);
         // println("Merged JSON saved as merged.json");
+        jsonNames = new ArrayList<String>(stagess.keys());
+        println(jsonNames);
+        // for (int i = 0; i < jsonNames.size(); i++) {
+        //     JSONObject stage = stagess.getJSONObject(jsonNames.get(i));
+        //     // stageNames.add(stage.getString("stageName"));
+        //     stageNames = new ArrayList<String>(stage.keys());
+        //     println(stageNames);
+        // }
 
 
         Collections.sort(loadedStages, new Comparator<JSONObject>() {
@@ -71,7 +87,6 @@ void loadJSONs() {
                 return a.getInt("difficulty") - b.getInt("difficulty");
             }
         });
-        JSONArray allStages = new JSONArray();
         for (int i = 0; i < loadedStages.size(); i++) {
             JSONObject stage = loadedStages.get(i);
             allStages.append(stage);
@@ -81,6 +96,20 @@ void loadJSONs() {
         // String newSavePath = folderPath + "/allStages.json";
         // saveJSONArray(allStages, newSavePath);
         // println("Merged JSON saved as allStages.json");
+
+
+        // 保存テストok
+        JSONObject json_1 = stagess.getJSONObject("stageJSON1");
+        JSONObject json_2 = stagess.getJSONObject("stageJSON2");
+        JSONObject newJson = json_2.getJSONObject("stage2");
+        newJson.setInt("difficulty", 100);
+        json_2.remove("stage2");
+        json_1.setJSONObject("stage2", newJson);
+        String savePath_1 = folderPath + "/stageJSON1.json";
+        saveJSONObject(json_1, savePath_1);
+        String savePath_2 = folderPath + "/stageJSON2.json";
+        saveJSONObject(json_2, savePath_2);
+
     } else {
         println("folder is null or not a directory");
     }
@@ -156,7 +185,7 @@ class Player {
 
     void goal() {
         sounds.get("clear").play();
-        scene = "goal";
+        scene = GOAL;
         stageNum++;
         if (stageNum > maxStageNum) {
             stageNum = 0;
@@ -167,7 +196,7 @@ class Player {
         sounds.get("dead").play();
         vy = 0;
         status = "dead";
-        scene = "dead";
+        scene = DEAD;
     }
 
     void update() {
@@ -535,7 +564,7 @@ void draw() {
         }
     }
     
-    if (scene == "game") {
+    if (scene == GAME) {
         player.move(0);
         if (keys['A'] || keys['a'] || keys[LEFT]) {
             player.move(-1);
@@ -554,8 +583,8 @@ void draw() {
             player.dead();
         }
         if (keys['P'] || keys['p']) {
-            if (scene == "game") {
-                scene = "pause";
+            if (scene == GAME) {
+                scene = PAUSE;
             }
         }
         player.update();
@@ -573,10 +602,10 @@ void draw() {
         acid.update();
         acid.collision(player);
     }
-    if (scene == "goal" || scene == "dead") {
+    if (scene == GOAL || scene == DEAD) {
         if (waitFrame > fps*3/2) {
             loadStage(stageNum);
-            scene = "game";
+            scene = GAME;
             waitFrame = 0;
         } else {
             waitFrame++;
@@ -596,19 +625,19 @@ void draw() {
     acid.display();
     player.display();
 
-    if (scene == "goal") {
+    if (scene == GOAL) {
         fill(255);
         textSize(50);
         textAlign(CENTER, CENTER);
         text("GOAL!", width/2, height/2);
     }
-    if (scene == "dead") {
+    if (scene == DEAD) {
         fill(255);
         textSize(50);
         textAlign(CENTER, CENTER);
         text("MISS!", width/2, height/2);
     }
-    if (scene == "pause") {
+    if (scene == PAUSE) {
         fill(0, 127);
         rect(0, 0, width, height);
         fill(255);
@@ -617,8 +646,8 @@ void draw() {
         text("Press Space Key to Start", width/2, height/2);
         text(stageName, width*0.1, height*0.1);
         if (keys[' '] || keys[32]) {
-            if (scene == "pause") {
-                scene = "game";
+            if (scene == PAUSE) {
+                scene = GAME;
             }
         }
     }
