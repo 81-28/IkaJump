@@ -1,8 +1,18 @@
 
 import processing.sound.*;
-JSONArray stages;
+// import java.io.File;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Set;
+import java.util.List;
+import java.util.Map;
+
 HashMap<String, SoundFile> sounds = new HashMap<String, SoundFile>();
 HashMap<String, PImage> images = new HashMap<String, PImage>();
+JSONArray stages;
+// ↓なぜかグローバルだと上手くいかない
+// String folderPath = sketchPath("STAGESs");
+JSONObject stagess = new JSONObject();
 
 int fps = 60;
 int waitFrame = 0;
@@ -21,6 +31,60 @@ int stageNum = 0;
 int maxStageNum = 0;
 int baseJumpCount = 1;
 
+
+void loadJSONs() {
+    String folderPath = sketchPath("STAGESs");
+    File folder = new File(folderPath);
+    ArrayList<JSONObject> loadedStages = new ArrayList<JSONObject>();
+
+    if (folder != null && folder.isDirectory()) {
+        File[] listOfFiles = folder.listFiles();
+        for (File file : listOfFiles) {
+            if (file.isFile() && file.getName().endsWith(".json")) {
+                String filePath = file.getAbsolutePath();
+                String fileName = file.getName();
+                String name = fileName.substring(0, fileName.length() - 5);
+                JSONObject jsonObject = loadJSONObject(filePath);
+                stagess.setJSONObject(name, jsonObject);
+
+                Set<String> keys = jsonObject.keys();
+                for (String key : keys) {
+                    JSONObject originalStage = jsonObject.getJSONObject(key);
+                    JSONObject stage = JSONObject.parse(originalStage.toString());
+                    stage.setString("stageName", key);
+                    loadedStages.add(stage);
+                }
+
+                println("Loaded and merged: " + file.getName());
+            }
+        }
+
+
+        println(stagess);
+        // String savePath = folderPath + "/merged.json";
+        // saveJSONObject(stagess, savePath);
+        // println("Merged JSON saved as merged.json");
+
+
+        Collections.sort(loadedStages, new Comparator<JSONObject>() {
+            public int compare(JSONObject a, JSONObject b) {
+                return a.getInt("difficulty") - b.getInt("difficulty");
+            }
+        });
+        JSONArray allStages = new JSONArray();
+        for (int i = 0; i < loadedStages.size(); i++) {
+            JSONObject stage = loadedStages.get(i);
+            allStages.append(stage);
+        }
+
+        println(allStages);
+        // String newSavePath = folderPath + "/allStages.json";
+        // saveJSONArray(allStages, newSavePath);
+        // println("Merged JSON saved as allStages.json");
+    } else {
+        println("folder is null or not a directory");
+    }
+}
 
 void keyPressed() {
     if (key < 128) {
@@ -456,6 +520,8 @@ void setup() {
     images.put("fish", loadImage("images/fish.png"));
     
     loadStage(stageNum);
+
+    loadJSONs();
 }
 
 
