@@ -10,16 +10,24 @@ import java.util.Set;
 HashMap<String, SoundFile> sounds = new HashMap<String, SoundFile>();
 HashMap<String, PImage> images = new HashMap<String, PImage>();
 JSONArray stages;
-// ↓なぜかグローバルだと上手くいかない
-// String folderPath = sketchPath("STAGESs");
+String folderPath;
+// folderPath = sketchPath("STAGESs"); setupで設定
 JSONObject stagess = new JSONObject();
 JSONArray allStages = new JSONArray();
+boolean isFocusStages = false;
 ArrayList<String> jsonNames = new ArrayList<String>();
+int selectedJsonNum = 0;
+String selectedJsonName = "";
 ArrayList<String> stageNames = new ArrayList<String>();
+int selectedStageNum = 0;
+String selectedStageName = "";
 
 int fps = 60;
 int waitFrame = 0;
 boolean[] keys = new boolean[128];
+boolean coditionToExit = true;
+final int keyCoolFrame = fps/6;
+int keyCoolCount = keyCoolFrame;
 color bgColor = color(31, 31, 95);
 // 40block
 int sketchWidth = 800;
@@ -33,7 +41,12 @@ final int GAME = 0;
 final int PAUSE = 1;
 final int GOAL = 2;
 final int DEAD = 3;
-int scene = PAUSE;
+final int MAIN = 4;
+final int MENU = 5;
+int scene = MAIN;
+
+int selectedMainNum = 0;
+ArrayList<JSONObject> mainMenuStrings = new ArrayList<JSONObject>();
 
 int stageNum = 0;
 int maxStageNum = 0;
@@ -41,7 +54,7 @@ int baseJumpCount = 1;
 
 
 void loadJSONs() {
-    String folderPath = sketchPath("STAGESs");
+    // String folderPath = sketchPath("STAGESs");
     File folder = new File(folderPath);
     ArrayList<JSONObject> loadedStages = new ArrayList<JSONObject>();
 
@@ -74,6 +87,7 @@ void loadJSONs() {
         // println("Merged JSON saved as merged.json");
         jsonNames = new ArrayList<String>(stagess.keys());
         println(jsonNames);
+        stageNames = new ArrayList<String>(stagess.getJSONObject(jsonNames.get(0)).keys());
         // for (int i = 0; i < jsonNames.size(); i++) {
         //     JSONObject stage = stagess.getJSONObject(jsonNames.get(i));
         //     // stageNames.add(stage.getString("stageName"));
@@ -99,16 +113,16 @@ void loadJSONs() {
 
 
         // 保存テストok
-        JSONObject json_1 = stagess.getJSONObject("stageJSON1");
-        JSONObject json_2 = stagess.getJSONObject("stageJSON2");
-        JSONObject newJson = json_2.getJSONObject("stage2");
-        newJson.setInt("difficulty", 100);
-        json_2.remove("stage2");
-        json_1.setJSONObject("stage2", newJson);
-        String savePath_1 = folderPath + "/stageJSON1.json";
-        saveJSONObject(json_1, savePath_1);
-        String savePath_2 = folderPath + "/stageJSON2.json";
-        saveJSONObject(json_2, savePath_2);
+        // JSONObject json_1 = stagess.getJSONObject("stageJSON1");
+        // JSONObject json_2 = stagess.getJSONObject("stageJSON2");
+        // JSONObject newJson = json_2.getJSONObject("stage2");
+        // newJson.setInt("difficulty", 100);
+        // json_2.remove("stage2");
+        // json_1.setJSONObject("stage2", newJson);
+        // String savePath_1 = folderPath + "/stageJSON1.json";
+        // saveJSONObject(json_1, savePath_1);
+        // String savePath_2 = folderPath + "/stageJSON2.json";
+        // saveJSONObject(json_2, savePath_2);
 
     } else {
         println("folder is null or not a directory");
@@ -121,6 +135,13 @@ void keyPressed() {
     }
     if (keyCode == UP || keyCode == DOWN || keyCode == LEFT || keyCode == RIGHT || keyCode == 32) {
         keys[keyCode] = true;
+    }
+    if (key == ESC) {
+        if (coditionToExit) {
+            exit();
+        } else {
+            key = 0;
+        }
     }
 }
 
@@ -511,6 +532,43 @@ void loadStage(int num) {
     }
 }
 
+void gameCollision() {
+    player.update();
+    goal.collision(player);
+    for (BoostItem boostItem : boostItems) {
+        boostItem.collision(player);
+    }
+    for (Platform platform : platforms) {
+        platform.collision(player);
+    }
+    for (MovePlatform movePlatform : movePlatforms) {
+        movePlatform.update();
+        movePlatform.collision(player);
+    }
+    acid.update();
+    acid.collision(player);
+}
+
+void gameDisplay() {
+    for (Star star : stars) {
+        for (int i = 0; i < totalHeight; i += height) {
+            star.display(i);
+        }
+    }
+    goal.display();
+    for (BoostItem boostItem : boostItems) {
+        boostItem.display();
+    }
+    for (Platform platform : platforms) {
+        platform.display();
+    }
+    for (MovePlatform movePlatform : movePlatforms) {
+        movePlatform.display();
+    }
+    acid.display();
+    player.display();
+}
+
 
 String stageName = "";
 Player player;
@@ -527,6 +585,7 @@ void setup() {
     background(bgColor);
     noStroke();
 
+    folderPath = sketchPath("STAGESs");
     stages = loadJSONArray("stages.json");
     maxStageNum = stages.size() - 1;
     sounds.put("jump", new SoundFile(this, "sounds/jump.mp3"));
@@ -548,9 +607,14 @@ void setup() {
     images.put("acid", loadImage("images/acid.png"));
     images.put("fish", loadImage("images/fish.png"));
     
-    loadStage(stageNum);
+    mainMenuStrings.add(parseJSONObject("{\"name\": \"PLAY\",\"x\": 200,\"y\": 350,\"UP\": 0,\"LEFT\": 0,\"DOWN\": 3,\"RIGHT\": 1}"));
+    mainMenuStrings.add(parseJSONObject("{\"name\": \"CONTINUE\",\"x\": 400,\"y\": 350,\"UP\": 1,\"LEFT\": 0,\"DOWN\": 3,\"RIGHT\": 2}"));
+    mainMenuStrings.add(parseJSONObject("{\"name\": \"SELECT\",\"x\": 600,\"y\": 350,\"UP\": 2,\"LEFT\": 1,\"DOWN\": 3,\"RIGHT\": 2}"));
+    mainMenuStrings.add(parseJSONObject("{\"name\": \"NEW\",\"x\": 300,\"y\": 500,\"UP\": 0,\"LEFT\": 3,\"DOWN\": 3,\"RIGHT\": 4}"));
+    mainMenuStrings.add(parseJSONObject("{\"name\": \"SELECT\",\"x\": 500,\"y\": 500,\"UP\": 0,\"LEFT\": 3,\"DOWN\": 4,\"RIGHT\": 4}"));
 
     loadJSONs();
+    loadStage(stageNum);
 }
 
 
@@ -558,12 +622,122 @@ void setup() {
 boolean wasSpaceKeyPressed = false;
 void draw() {
     background(bgColor);
-    for (Star star : stars) {
-        for (int i = 0; i < totalHeight; i += height) {
-            star.display(i);
+
+    if (scene == GOAL || scene == DEAD) {
+        if (waitFrame > fps*3/2) {
+            loadStage(stageNum);
+            scene = GAME;
+            waitFrame = 0;
+        } else {
+            waitFrame++;
         }
     }
-    
+
+    if (scene == MAIN) {
+        JSONObject mainMenuString = mainMenuStrings.get(selectedMainNum);
+        if (keyCoolCount < 0 && (keys['W'] || keys['w'] || keys[UP])) {
+            keyCoolCount = keyCoolFrame;
+            selectedMainNum = mainMenuString.getInt("UP");
+        }
+        if (keyCoolCount < 0 && (keys['A'] || keys['a'] || keys[LEFT])) {
+            keyCoolCount = keyCoolFrame;
+            selectedMainNum = mainMenuString.getInt("LEFT");
+        }
+        if (keyCoolCount < 0 && (keys['S'] || keys['s'] || keys[DOWN])) {
+            keyCoolCount = keyCoolFrame;
+            selectedMainNum = mainMenuString.getInt("DOWN");
+        }
+        if (keyCoolCount < 0 && (keys['D'] || keys['d'] || keys[RIGHT])) {
+            keyCoolCount = keyCoolFrame;
+            selectedMainNum = mainMenuString.getInt("RIGHT");
+        }
+        if (keyCoolCount < 0 && (keys[ENTER] || keys[RETURN] || keys[' '] || keys[32])) {
+            keyCoolCount = keyCoolFrame;
+            if (selectedMainNum == 0) {
+                scene = GAME;
+            } else if (selectedMainNum == 1) {
+                scene = GAME;
+            } else if (selectedMainNum == 2) {
+                scene = MENU;
+                isFocusStages = false;
+                selectedJsonNum = 0;
+            } else if (selectedMainNum == 3) {
+
+            } else if (selectedMainNum == 4) {
+                scene = MENU;
+                isFocusStages = false;
+                selectedJsonNum = 0;
+            }
+            coditionToExit = false;
+        }
+        
+    }
+    if (scene == MENU) {
+        if (keyCoolCount < 0 && (keys['W'] || keys['w'] || keys[UP])) {
+            keyCoolCount = keyCoolFrame;
+            if (isFocusStages) {
+                selectedStageNum--;
+                if (selectedStageNum < 0) {
+                    selectedStageNum = stageNames.size() - 1;
+                } else if (selectedStageNum >= stageNames.size()) {
+                    selectedStageNum = 0;
+                }
+            } else {
+                selectedJsonNum--;
+                if (selectedJsonNum < 0) {
+                    selectedJsonNum = jsonNames.size() - 1;
+                } else if (selectedJsonNum >= jsonNames.size()) {
+                    selectedJsonNum = 0;
+                }
+            }
+        }
+        if (keyCoolCount < 0 && (keys['A'] || keys['a'] || keys[LEFT])) {
+            keyCoolCount = keyCoolFrame;
+            isFocusStages = false;
+            selectedStageNum = 0;
+        }
+        if (keyCoolCount < 0 && (keys['S'] || keys['s'] || keys[DOWN])) {
+            keyCoolCount = keyCoolFrame;
+            if (isFocusStages) {
+                selectedStageNum++;
+                if (selectedStageNum < 0) {
+                    selectedStageNum = stageNames.size() - 1;
+                } else if (selectedStageNum >= stageNames.size()) {
+                    selectedStageNum = 0;
+                }
+            } else {
+                selectedJsonNum++;
+                if (selectedJsonNum < 0) {
+                    selectedJsonNum = jsonNames.size() - 1;
+                } else if (selectedJsonNum >= jsonNames.size()) {
+                    selectedJsonNum = 0;
+                }
+            }
+        }
+        if (keyCoolCount < 0 && (keys['D'] || keys['d'] || keys[RIGHT])) {
+            keyCoolCount = keyCoolFrame;
+            isFocusStages = true;
+        }
+        stageNames = new ArrayList<String>(stagess.getJSONObject(jsonNames.get(selectedJsonNum)).keys());
+
+        if (keyCoolCount < 0 && (keys[ENTER] || keys[RETURN] || keys[' '] || keys[32])) {
+            keyCoolCount = keyCoolFrame;
+            if (isFocusStages) {
+                // selectedJsonName = jsonNames.get(selectedJsonNum);
+                // selectedStageName = stageNames.get(selectedStageNum);
+                // JSONObject stage = stagess.getJSONObject(selectedJsonName).getJSONObject(selectedStageName);
+
+                // loadStage(stageNum);
+                scene = GAME;
+            }
+        }
+        if (keyCoolCount < 0 && keys[ESC]) {
+            keyCoolCount = keyCoolFrame;
+            scene = MAIN;
+            coditionToExit = true;
+        }
+    }
+
     if (scene == GAME) {
         player.move(0);
         if (keys['A'] || keys['a'] || keys[LEFT]) {
@@ -582,49 +756,33 @@ void draw() {
         if (keys['R'] || keys['r']) {
             player.dead();
         }
-        if (keys['P'] || keys['p']) {
-            if (scene == GAME) {
-                scene = PAUSE;
+        if (keyCoolCount < 0 && (keys[ESC] || keys['P'] || keys['p'])) {
+            keyCoolCount = keyCoolFrame;
+            scene = PAUSE;
+        }
+        gameCollision();
+    }
+    if (scene == PAUSE) {
+        if (keyCoolCount < 0 && (keys[' '] || keys[32] || keys['P'] || keys['p'])) {
+            keyCoolCount = keyCoolFrame;
+            scene = GAME;
+        }
+        if (keyCoolCount < 0 && keys[ESC]) {
+            keyCoolCount = keyCoolFrame;
+            if (selectedMainNum == 0 || selectedMainNum == 1) {
+                scene = MAIN;
+                coditionToExit = true;
+            } else if (selectedMainNum == 2 || selectedMainNum == 4) {
+                scene = MENU;
+                isFocusStages = false;
+                selectedJsonNum = 0;
             }
         }
-        player.update();
-        goal.collision(player);
-        for (BoostItem boostItem : boostItems) {
-            boostItem.collision(player);
-        }
-        for (Platform platform : platforms) {
-            platform.collision(player);
-        }
-        for (MovePlatform movePlatform : movePlatforms) {
-            movePlatform.update();
-            movePlatform.collision(player);
-        }
-        acid.update();
-        acid.collision(player);
-    }
-    if (scene == GOAL || scene == DEAD) {
-        if (waitFrame > fps*3/2) {
-            loadStage(stageNum);
-            scene = GAME;
-            waitFrame = 0;
-        } else {
-            waitFrame++;
-        }
     }
 
-    goal.display();
-    for (BoostItem boostItem : boostItems) {
-        boostItem.display();
+    if (scene == GAME || scene == GOAL || scene == DEAD || scene == PAUSE) {
+        gameDisplay();
     }
-    for (Platform platform : platforms) {
-        platform.display();
-    }
-    for (MovePlatform movePlatform : movePlatforms) {
-        movePlatform.display();
-    }
-    acid.display();
-    player.display();
-
     if (scene == GOAL) {
         fill(255);
         textSize(50);
@@ -643,12 +801,61 @@ void draw() {
         fill(255);
         textSize(20);
         textAlign(CENTER, CENTER);
-        text("Press Space Key to Start", width/2, height/2);
+        text("Press Space/P Key to Resume", width/2, height/2);
         text(stageName, width*0.1, height*0.1);
-        if (keys[' '] || keys[32]) {
-            if (scene == PAUSE) {
-                scene = GAME;
+    }
+    if (scene == MAIN) {
+        fill(255);
+        textSize(50);
+        textAlign(CENTER, CENTER);
+        text("MAIN", width/2, height/10);
+        for (int i = 0; i < mainMenuStrings.size(); i++) {
+            if (i == selectedMainNum) {
+                fill(255, 0, 0);
+            } else {
+                fill(255);
             }
+            JSONObject mainMenuString = mainMenuStrings.get(i);
+            text(mainMenuString.getString("name"), mainMenuString.getInt("x"), mainMenuString.getInt("y"));
         }
     }
+    if (scene == MENU) {
+        fill(255);
+        textSize(50);
+        textAlign(CENTER, CENTER);
+        text("SELECT", width/4, height/8);
+        fill(255, 255, 0);
+        textSize(30);
+        text("JSON", width/5, height/4);
+        for (int i = 0; i < jsonNames.size(); i++) {
+            String jsonName = jsonNames.get(i);
+            if (i == selectedJsonNum && !isFocusStages) {
+                fill(255, 0, 0);
+            } else {
+                fill(255);
+            }
+            text(jsonName, width/5, height/4 + 50*(i+1));
+        }
+        fill(255, 255, 0);
+        text("STAGE", width/2, height/4);
+        for (int i = 0; i < stageNames.size(); i++) {
+            String stageName = stageNames.get(i);
+            if (i == selectedStageNum && isFocusStages) {
+                fill(255, 0, 0);
+            } else {
+                fill(255);
+            }
+            text(stageName, width/2, height/4 + 50*(i+1));
+        }
+        fill(255, 255, 0);
+        text("INFO", width*3/4, height/4);
+        if (isFocusStages) {
+            JSONObject stage = stagess.getJSONObject(jsonNames.get(selectedJsonNum)).getJSONObject(stageNames.get(selectedStageNum));
+            fill(255);
+            text("Difficulty: " + stage.getInt("difficulty"), width*3/4, height/4 + 50);
+            text("AUTHOR: " + stage.getString("author"), width*3/4, height/4 + 100);
+        }
+    }
+
+    keyCoolCount--;
 }
