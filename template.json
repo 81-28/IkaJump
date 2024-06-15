@@ -1,0 +1,37 @@
+{
+    "template": {
+        "difficulty": 0,
+        "author": "name",
+        "bgColor": "#1f1f5f",
+        "width": 800,
+        "height": 1200,
+        "starNum": 8,
+        "player": {
+            "x": 400.0, "y": 140.0,
+            "v": 3.0, "g": 0.5,
+            "jump": 21.0, "jumpCount": 1,
+            "chargeTime": 0.5
+        },
+        "goal": {
+            "x": 400.0, "y": 1000.0
+        },
+        "acid": {
+            "y": -800.0, "vy": 1.0
+        },
+        "platforms": [
+            {
+                "x": 0.0, "y": 120.0, "w": 40
+            },
+            {
+                "x": 160.0, "y": 400.0, "w": 10
+            },
+            {
+                "x": 480.0, "y": 700.0, "w": 8
+            }
+        ],
+        "movePlatforms": [
+        ],
+        "boostItems": [
+        ]
+    }
+}

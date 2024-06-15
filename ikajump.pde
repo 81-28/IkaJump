@@ -9,11 +9,18 @@ import java.util.Set;
 
 HashMap<String, SoundFile> sounds = new HashMap<String, SoundFile>();
 HashMap<String, PImage> images = new HashMap<String, PImage>();
-JSONArray stages;
+ArrayList<JSONObject> stages = new ArrayList<JSONObject>();
 String folderPath;
-// folderPath = sketchPath("STAGESs"); setupで設定
+// folderPath = sketchPath("STAGESs"); setupで設定,相対パスにするとエラー
 JSONObject stagess = new JSONObject();
-JSONArray allStages = new JSONArray();
+ArrayList<JSONObject> allStages = new ArrayList<JSONObject>();
+
+JSONObject editingStage;
+JSONObject selectedEditingItem;
+JSONArray editingPlatforms;
+JSONArray editingMove;
+JSONArray editingItems;
+
 boolean isFocusStages = false;
 ArrayList<String> jsonNames = new ArrayList<String>();
 int selectedJsonNum = 0;
@@ -29,6 +36,7 @@ boolean coditionToExit = true;
 final int keyCoolFrame = fps/6;
 int keyCoolCount = keyCoolFrame;
 color bgColor = color(31, 31, 95);
+color gameBGColor = color(31, 31, 95);
 // 40block
 int sketchWidth = 800;
 int sketchHeight = 700;
@@ -43,11 +51,21 @@ final int GOAL = 2;
 final int DEAD = 3;
 final int MAIN = 4;
 final int MENU = 5;
+final int STAGEMENU = 6;
+final int EDITMENU = 7;
+final int EDIT = 8;
 int scene = MAIN;
 
 int selectedMainNum = 0;
 ArrayList<JSONObject> mainMenuStrings = new ArrayList<JSONObject>();
+int selectedStageMenuNum = 0;
+float stageMenuBaseY = 0;
+ArrayList<String> stageMenuStrings = new ArrayList<String>();
+int selectedJsonMenuNum = 0;
+float jsonMenuBaseY = 0;
+ArrayList<String> jsonMenuStrings = new ArrayList<String>();
 
+int allStageNum = 0;
 int stageNum = 0;
 int maxStageNum = 0;
 int baseJumpCount = 1;
@@ -66,15 +84,17 @@ void loadJSONs() {
                 String fileName = file.getName();
                 String name = fileName.substring(0, fileName.length() - 5);
                 JSONObject jsonObject = loadJSONObject(filePath);
-                stagess.setJSONObject(name, jsonObject);
 
                 Set<String> keys = jsonObject.keys();
                 for (String key : keys) {
-                    JSONObject originalStage = jsonObject.getJSONObject(key);
-                    JSONObject stage = JSONObject.parse(originalStage.toString());
+                    // JSONObject originalStage = jsonObject.getJSONObject(key);
+                    // JSONObject stage = JSONObject.parse(originalStage.toString());
+                    JSONObject stage = jsonObject.getJSONObject(key);
                     stage.setString("stageName", key);
                     loadedStages.add(stage);
                 }
+
+                stagess.setJSONObject(name, jsonObject);
 
                 println("Loaded and merged: " + file.getName());
             }
@@ -101,11 +121,12 @@ void loadJSONs() {
                 return a.getInt("difficulty") - b.getInt("difficulty");
             }
         });
-        for (int i = 0; i < loadedStages.size(); i++) {
-            JSONObject stage = loadedStages.get(i);
-            allStages.append(stage);
-        }
+        // for (int i = 0; i < loadedStages.size(); i++) {
+        //     JSONObject stage = loadedStages.get(i);
+        //     allStages.add(stage);
+        // }
 
+        allStages = new ArrayList<JSONObject>(loadedStages);
         println(allStages);
         // String newSavePath = folderPath + "/allStages.json";
         // saveJSONArray(allStages, newSavePath);
@@ -151,6 +172,34 @@ void keyReleased() {
     }
     if (keyCode == UP || keyCode == DOWN || keyCode == LEFT || keyCode == RIGHT || keyCode == 32) {
         keys[keyCode] = false;
+    }
+}
+
+void mouseWheel(MouseEvent event) {
+    int e = event.getCount();
+    if (scene == MENU) {
+        if (mouseY >= height/4) {
+            if (mouseX < width/3) {
+                jsonMenuBaseY += e * 20;
+            } else if (mouseX < width*2/3) {
+                stageMenuBaseY += e * 20;
+            }
+        }
+    }
+}
+
+void adjustMenuBaseY() {
+    float nowStageMenuY = height/4 + 50*(selectedStageNum+1) - stageMenuBaseY;
+    if (nowStageMenuY < height/4 + 100) {
+        stageMenuBaseY = 50*(selectedStageNum+1) - 100;
+    } else if (nowStageMenuY > height - 75) {
+        stageMenuBaseY = 50*(selectedStageNum+1) - height*3/4 + 75;
+    }
+    float nowJsonMenuY = height/4 + 50*(selectedJsonNum+1) - jsonMenuBaseY;
+    if (nowJsonMenuY < height/4 + 100) {
+        jsonMenuBaseY = 50*(selectedJsonNum+1) - 100;
+    } else if (nowJsonMenuY > height - 75) {
+        jsonMenuBaseY = 50*(selectedJsonNum+1) - height*3/4 + 75;
     }
 }
 
@@ -208,6 +257,9 @@ class Player {
         sounds.get("clear").play();
         scene = GOAL;
         stageNum++;
+        if (selectedMainNum == 0 || selectedMainNum == 1) {
+            allStageNum = stageNum;
+        }
         if (stageNum > maxStageNum) {
             stageNum = 0;
         }
@@ -483,7 +535,8 @@ class Acid extends Platform {
 }
 
 void loadStage(int num) {
-    JSONObject stage = stages.getJSONObject(num);;
+    JSONObject stage = stages.get(num);
+
     JSONObject playerJSON = stage.getJSONObject("player");
     JSONArray platformsJSON = stage.getJSONArray("platforms");
     JSONArray movePlatformsJSON = stage.getJSONArray("movePlatforms");
@@ -494,10 +547,12 @@ void loadStage(int num) {
     movePlatforms.clear();
     boostItems.clear();
 
-    stageName = stage.getString("name");
+    stageName = stage.getString("stageName");
+    author = stage.getString("author");
+    difficulty = stage.getInt("difficulty");
 
     String bgColorHex = stage.getString("bgColor").replace("#", "");
-    bgColor = unhex(bgColorHex);
+    gameBGColor = unhex(bgColorHex);
     totalHeight = stage.getInt("height");
     if (totalHeight < height) {
         totalHeight = height;
@@ -571,6 +626,8 @@ void gameDisplay() {
 
 
 String stageName = "";
+String author = "";
+int difficulty = 0;
 Player player;
 GoalItem goal;
 Acid acid;
@@ -586,8 +643,7 @@ void setup() {
     noStroke();
 
     folderPath = sketchPath("STAGESs");
-    stages = loadJSONArray("stages.json");
-    maxStageNum = stages.size() - 1;
+    // stages = loadJSONArray("stages.json");
     sounds.put("jump", new SoundFile(this, "sounds/jump.mp3"));
     sounds.put("clear", new SoundFile(this, "sounds/clear.mp3"));
     sounds.put("fish", new SoundFile(this, "sounds/fish.mp3"));
@@ -609,11 +665,23 @@ void setup() {
     
     mainMenuStrings.add(parseJSONObject("{\"name\": \"PLAY\",\"x\": 200,\"y\": 350,\"UP\": 0,\"LEFT\": 0,\"DOWN\": 3,\"RIGHT\": 1}"));
     mainMenuStrings.add(parseJSONObject("{\"name\": \"CONTINUE\",\"x\": 400,\"y\": 350,\"UP\": 1,\"LEFT\": 0,\"DOWN\": 3,\"RIGHT\": 2}"));
-    mainMenuStrings.add(parseJSONObject("{\"name\": \"SELECT\",\"x\": 600,\"y\": 350,\"UP\": 2,\"LEFT\": 1,\"DOWN\": 3,\"RIGHT\": 2}"));
+    mainMenuStrings.add(parseJSONObject("{\"name\": \"SELECT\",\"x\": 600,\"y\": 350,\"UP\": 2,\"LEFT\": 1,\"DOWN\": 4,\"RIGHT\": 2}"));
     mainMenuStrings.add(parseJSONObject("{\"name\": \"NEW\",\"x\": 300,\"y\": 500,\"UP\": 0,\"LEFT\": 3,\"DOWN\": 3,\"RIGHT\": 4}"));
-    mainMenuStrings.add(parseJSONObject("{\"name\": \"SELECT\",\"x\": 500,\"y\": 500,\"UP\": 0,\"LEFT\": 3,\"DOWN\": 4,\"RIGHT\": 4}"));
+    mainMenuStrings.add(parseJSONObject("{\"name\": \"SELECT\",\"x\": 500,\"y\": 500,\"UP\": 2,\"LEFT\": 3,\"DOWN\": 4,\"RIGHT\": 4}"));
+
+    stageMenuStrings.add("Play");
+    stageMenuStrings.add("Edit");
+    stageMenuStrings.add("Move");
+    stageMenuStrings.add("Copy");
+    stageMenuStrings.add("Delete");
+
+    jsonMenuStrings.add("Play");
+    jsonMenuStrings.add("EditName");
+    jsonMenuStrings.add("Copy");
 
     loadJSONs();
+    stages = new ArrayList<JSONObject>(allStages);
+    maxStageNum = stages.size() - 1;
     loadStage(stageNum);
 }
 
@@ -621,7 +689,11 @@ void setup() {
 
 boolean wasSpaceKeyPressed = false;
 void draw() {
-    background(bgColor);
+    if (scene == GAME || scene == GOAL || scene == DEAD || scene == PAUSE || scene == EDIT) {
+        background(gameBGColor);
+    } else {
+        background(bgColor);
+    }
 
     if (scene == GOAL || scene == DEAD) {
         if (waitFrame > fps*3/2) {
@@ -655,8 +727,16 @@ void draw() {
             keyCoolCount = keyCoolFrame;
             if (selectedMainNum == 0) {
                 scene = GAME;
+                stages = new ArrayList<JSONObject>(allStages);
+                maxStageNum = stages.size() - 1;
+                stageNum = 0;
+                loadStage(stageNum);
             } else if (selectedMainNum == 1) {
                 scene = GAME;
+                stages = new ArrayList<JSONObject>(allStages);
+                maxStageNum = stages.size() - 1;
+                stageNum = allStageNum;
+                loadStage(stageNum);
             } else if (selectedMainNum == 2) {
                 scene = MENU;
                 isFocusStages = false;
@@ -690,11 +770,13 @@ void draw() {
                     selectedJsonNum = 0;
                 }
             }
+            adjustMenuBaseY();
         }
         if (keyCoolCount < 0 && (keys['A'] || keys['a'] || keys[LEFT])) {
             keyCoolCount = keyCoolFrame;
             isFocusStages = false;
             selectedStageNum = 0;
+            adjustMenuBaseY();
         }
         if (keyCoolCount < 0 && (keys['S'] || keys['s'] || keys[DOWN])) {
             keyCoolCount = keyCoolFrame;
@@ -713,28 +795,123 @@ void draw() {
                     selectedJsonNum = 0;
                 }
             }
+            adjustMenuBaseY();
         }
         if (keyCoolCount < 0 && (keys['D'] || keys['d'] || keys[RIGHT])) {
             keyCoolCount = keyCoolFrame;
             isFocusStages = true;
+            adjustMenuBaseY();
         }
+
         stageNames = new ArrayList<String>(stagess.getJSONObject(jsonNames.get(selectedJsonNum)).keys());
 
         if (keyCoolCount < 0 && (keys[ENTER] || keys[RETURN] || keys[' '] || keys[32])) {
             keyCoolCount = keyCoolFrame;
             if (isFocusStages) {
-                // selectedJsonName = jsonNames.get(selectedJsonNum);
-                // selectedStageName = stageNames.get(selectedStageNum);
-                // JSONObject stage = stagess.getJSONObject(selectedJsonName).getJSONObject(selectedStageName);
+                selectedJsonName = jsonNames.get(selectedJsonNum);
+                selectedStageName = stageNames.get(selectedStageNum);
+                JSONObject stage = stagess.getJSONObject(selectedJsonName).getJSONObject(selectedStageName);
+                // println(stage);
 
-                // loadStage(stageNum);
-                scene = GAME;
+                selectedJsonMenuNum = 0;
+                selectedStageMenuNum = 0;
+                scene = STAGEMENU;
+            } else {
+                selectedJsonName = jsonNames.get(selectedJsonNum);
+                println(selectedJsonName);
+                selectedJsonMenuNum = 0;
+                selectedStageMenuNum = 0;
+                scene = STAGEMENU;
             }
         }
         if (keyCoolCount < 0 && keys[ESC]) {
             keyCoolCount = keyCoolFrame;
             scene = MAIN;
             coditionToExit = true;
+        }
+    }
+
+
+    if (scene == STAGEMENU) {
+        if (keyCoolCount < 0 && (keys['W'] || keys['w'] || keys[UP])) {
+            keyCoolCount = keyCoolFrame;
+            if (isFocusStages) {
+                selectedStageMenuNum--;
+                if (selectedStageMenuNum < 0) {
+                    selectedStageMenuNum = stageMenuStrings.size() - 1;
+                } else if (selectedStageMenuNum >= stageMenuStrings.size()) {
+                    selectedStageMenuNum = 0;
+                }
+            } else {
+                selectedJsonMenuNum--;
+                if (selectedJsonMenuNum < 0) {
+                    selectedJsonMenuNum = jsonMenuStrings.size() - 1;
+                } else if (selectedJsonMenuNum >= jsonMenuStrings.size()) {
+                    selectedJsonMenuNum = 0;
+                }
+            }
+        }
+        if (keyCoolCount < 0 && (keys['S'] || keys['s'] || keys[DOWN])) {
+            keyCoolCount = keyCoolFrame;
+            if (isFocusStages) {
+                selectedStageMenuNum++;
+                if (selectedStageMenuNum < 0) {
+                    selectedStageMenuNum = stageMenuStrings.size() - 1;
+                } else if (selectedStageMenuNum >= stageMenuStrings.size()) {
+                    selectedStageMenuNum = 0;
+                }
+            } else {
+                selectedJsonMenuNum++;
+                if (selectedJsonMenuNum < 0) {
+                    selectedJsonMenuNum = jsonMenuStrings.size() - 1;
+                } else if (selectedJsonMenuNum >= jsonMenuStrings.size()) {
+                    selectedJsonMenuNum = 0;
+                }
+            }
+        }
+        if (keyCoolCount < 0 && (keys[ENTER] || keys[RETURN] || keys[' '] || keys[32])) {
+            keyCoolCount = keyCoolFrame;
+            if (isFocusStages) {
+                if (selectedStageMenuNum == 0) {
+                    println("Play");
+                    scene = GAME;
+                    stages.clear();
+                    stages.add(stagess.getJSONObject(selectedJsonName).getJSONObject(selectedStageName));
+                    maxStageNum = stages.size() - 1;
+                    loadStage(0);
+                } else if (selectedStageMenuNum == 1) {
+                    println("Edit");
+                } else if (selectedStageMenuNum == 2) {
+                    println("Move");
+                } else if (selectedStageMenuNum == 3) {
+                    println("Copy");
+                } else if (selectedStageMenuNum == 4) {
+                    println("Delete");
+                }
+            } else {
+                if (selectedJsonMenuNum == 0) {
+                    println("Play");
+                    // loadStage(stageNum);
+                    scene = GAME;
+                    stages.clear();
+                    JSONObject jsonObject = stagess.getJSONObject(selectedJsonName);
+                    Set<String> keys = jsonObject.keys();
+                    for (String key : keys) {
+                        stages.add(jsonObject.getJSONObject(key));
+                    }
+                    maxStageNum = stages.size() - 1;
+                    stageNum = 0;
+                    loadStage(stageNum);
+                } else if (selectedJsonMenuNum == 1) {
+                    println("EditName");
+                } else if (selectedJsonMenuNum == 2) {
+                    println("Copy");
+                }
+            }
+        }
+        if (keyCoolCount < 0 && (keys[ESC])) {
+            keyCoolCount = keyCoolFrame;
+            scene = MENU;
         }
     }
 
@@ -803,6 +980,9 @@ void draw() {
         textAlign(CENTER, CENTER);
         text("Press Space/P Key to Resume", width/2, height/2);
         text(stageName, width*0.1, height*0.1);
+        text(author, width*0.1, height*0.2);
+        text(difficulty, width*0.1, height*0.3);
+
     }
     if (scene == MAIN) {
         fill(255);
@@ -819,25 +999,24 @@ void draw() {
             text(mainMenuString.getString("name"), mainMenuString.getInt("x"), mainMenuString.getInt("y"));
         }
     }
-    if (scene == MENU) {
-        fill(255);
-        textSize(50);
-        textAlign(CENTER, CENTER);
-        text("SELECT", width/4, height/8);
-        fill(255, 255, 0);
+    if (scene == MENU || scene == STAGEMENU) {
+        fill(0, 31);
+        rect(width/3, 0, width/3, height);
         textSize(30);
-        text("JSON", width/5, height/4);
+        textAlign(CENTER, CENTER);
         for (int i = 0; i < jsonNames.size(); i++) {
             String jsonName = jsonNames.get(i);
-            if (i == selectedJsonNum && !isFocusStages) {
-                fill(255, 0, 0);
+            if (i == selectedJsonNum) {
+                if (isFocusStages) {
+                    fill(255, 0, 255);
+                } else {
+                    fill(255, 0, 0);
+                }
             } else {
                 fill(255);
             }
-            text(jsonName, width/5, height/4 + 50*(i+1));
+            text(jsonName, width/5, height/4 + 50*(i+1) - jsonMenuBaseY);
         }
-        fill(255, 255, 0);
-        text("STAGE", width/2, height/4);
         for (int i = 0; i < stageNames.size(); i++) {
             String stageName = stageNames.get(i);
             if (i == selectedStageNum && isFocusStages) {
@@ -845,15 +1024,54 @@ void draw() {
             } else {
                 fill(255);
             }
-            text(stageName, width/2, height/4 + 50*(i+1));
+            text(stageName, width/2, height/4 + 50*(i+1) - stageMenuBaseY);
         }
-        fill(255, 255, 0);
-        text("INFO", width*3/4, height/4);
         if (isFocusStages) {
+            textAlign(LEFT, CENTER);
             JSONObject stage = stagess.getJSONObject(jsonNames.get(selectedJsonNum)).getJSONObject(stageNames.get(selectedStageNum));
             fill(255);
-            text("Difficulty: " + stage.getInt("difficulty"), width*3/4, height/4 + 50);
-            text("AUTHOR: " + stage.getString("author"), width*3/4, height/4 + 100);
+            text("Difficulty: " + stage.getInt("difficulty"), width*2/3 + 50, height/4 + 50);
+            text("Author: " + stage.getString("author"), width*2/3 + 50, height/4 + 100);
+        }
+        textAlign(CENTER, CENTER);
+        fill(bgColor);
+        rect(0, 0, width, height/4+25);
+        fill(255, 255, 0);
+        text("JSON", width/5, height/4);
+        text("STAGE", width/2, height/4);
+        text("INFO", width*3/4, height/4);
+        textSize(50);
+        fill(255);
+        text("SELECT", width/5, height/8);
+    }
+    if (scene == STAGEMENU) {
+        fill(0, 127);
+        rect(0, 0, width, height);
+        fill(0);
+        rect(width/4, height/4, width/2, height/2);
+        fill(255, 255, 0);
+        textSize(50);
+        textAlign(CENTER, CENTER);
+        if (isFocusStages) {
+            text("STAGE MENU", width/2, height/3);
+            for (int i = 0; i < stageMenuStrings.size(); i++) {
+                if (i == selectedStageMenuNum) {
+                    fill(255, 0, 0);
+                } else {
+                    fill(255);
+                }
+                text(stageMenuStrings.get(i), width/2, height/3 + 50*(i+1));
+            }
+        } else {
+            text("JSON MENU", width/2, height/3);
+            for (int i = 0; i < jsonMenuStrings.size(); i++) {
+                if (i == selectedJsonMenuNum) {
+                    fill(255, 0, 0);
+                } else {
+                    fill(255);
+                }
+                text(jsonMenuStrings.get(i), width/2, height/3 + 50*(i+1));
+            }
         }
     }
 
