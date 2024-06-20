@@ -36,7 +36,6 @@ boolean[] keys = new boolean[128];
 boolean isInputting = false;
 String inputString = "";
 String inputPlace = "";
-boolean coditionToExit = true;
 boolean leftMousePressed = false;
 boolean rightMousePressed = false;
 float mousePX = 0;
@@ -171,7 +170,7 @@ void keyPressed() {
         keys[keyCode] = true;
     }
     if (key == ESC) {
-        if (coditionToExit) {
+        if (scene == MAIN) {
             exit();
         } else {
             key = 0;
@@ -216,6 +215,20 @@ void mouseWheel(MouseEvent event) {
                 stageMenuBaseY += e * 20;
             }
         }
+    }
+    if (scene == EDIT) {
+        float pastCollisionYStart = editingStage.collisionYStart;
+        float pastCollisionYEnd = editingStage.collisionYEnd;
+        float pastBaseY = baseY;
+        baseY += e * 20;
+        if (baseY < 0) {
+            baseY = 0;
+        } else if (baseY > totalHeight - height) {
+            baseY = totalHeight - height;
+        }
+        editingStage.collisionYStart = pastCollisionYStart + (pastBaseY - baseY);
+        editingStage.collisionYEnd = pastCollisionYEnd + (pastBaseY - baseY);
+        editingStage.setColPos();
     }
 }
 
@@ -579,43 +592,47 @@ class EditingStage {
     // JSONObject player, goal, acid;
     // JSONArray platforms, movePlatforms, boostItems;
     float collisionXStart, collisionYStart, collisionXEnd, collisionYEnd;
+    float leftCollisionXStart, leftCollisionXEnd, rightCollisionXStart, rightCollisionXEnd;
     EditingStage(JSONObject stage) {
-        this.nowStage = stage;
+        this.nowStage = JSONObject.parse(stage.toString());
         // this.player = stage.getJSONObject("player");
         // this.goal = stage.getJSONObject("goal");
         // this.acid = stage.getJSONObject("acid");
         // this.platforms = stage.getJSONArray("platforms");
         // this.movePlatforms = stage.getJSONArray("movePlatforms");
         // this.boostItems = stage.getJSONArray("boostItems");
+        println("nowStage");
+        println(nowStage);
     }
 
     void setColPos() {
         JSONObject colPos = new JSONObject();
+        leftCollisionXStart = collisionXStart - width;
+        leftCollisionXEnd = collisionXEnd - width;
+        rightCollisionXStart = collisionXStart + width;
+        rightCollisionXEnd = collisionXEnd + width;
         colPos.setFloat("collisionXStart", collisionXStart);
         colPos.setFloat("collisionYStart", collisionYStart);
         colPos.setFloat("collisionXEnd", collisionXEnd);
         colPos.setFloat("collisionYEnd", collisionYEnd);
-        nowStage.setJSONObject("colPos", colPos);
+        colPos.setFloat("leftCollisionXStart", leftCollisionXStart);
+        colPos.setFloat("leftCollisionXEnd", leftCollisionXEnd);
+        colPos.setFloat("rightCollisionXStart", rightCollisionXStart);
+        colPos.setFloat("rightCollisionXEnd", rightCollisionXEnd);
+        selectedEditingItem.get(0).setJSONObject("colPos", colPos);
+
+        // println("selectedEditingItem");
+        // println(selectedEditingItem);
     }
 
     void collision() {
         if (scene == EDIT) {
             if (leftMousePressed) {
                 if (selectedEditingItem.size() == 0) {
-                    // float collisionX = 0;
-                    // float collisionY = 0;
-                    // collisionX = nowStage.getJSONObject("player").getFloat("x");
-                    // collisionY = totalHeight - nowStage.getJSONObject("player").getFloat("y") - baseY;
                     collisionXStart = nowStage.getJSONObject("player").getFloat("x")-blockSize;
                     collisionYStart = totalHeight - nowStage.getJSONObject("player").getFloat("y") - baseY - blockSize;
                     collisionXEnd = collisionXStart + ballSize;
                     collisionYEnd = collisionYStart + ballSize;
-                    // if (collisionX - blockSize <= mouseX && mouseX < collisionX + blockSize && collisionY - blockSize <= mouseY && mouseY < collisionY + blockSize) {
-                    //     selectedEditingItem.add(nowStage.getJSONObject("player"));
-                    //     println("add player");
-                    //     selectedEditingItem.get(0).setString("type", "player");
-                    //     return;
-                    // }
                     if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
                         selectedEditingItem.add(nowStage.getJSONObject("player"));
                         println("add player");
@@ -623,14 +640,6 @@ class EditingStage {
                         setColPos();
                         return;
                     }
-                    // collisionX = nowStage.getJSONObject("goal").getFloat("x");
-                    // collisionY = totalHeight - nowStage.getJSONObject("goal").getFloat("y") - baseY;
-                    // if (collisionX - blockSize <= mouseX && mouseX < collisionX + blockSize && collisionY - blockSize <= mouseY && mouseY < collisionY + blockSize) {
-                    //     selectedEditingItem.add(nowStage.getJSONObject("goal"));
-                    //     println("add goal");
-                    //     selectedEditingItem.get(0).setString("type", "goal");
-                    //     return;
-                    // }
                     collisionXStart = nowStage.getJSONObject("goal").getFloat("x")-blockSize;
                     collisionYStart = totalHeight - nowStage.getJSONObject("goal").getFloat("y") - baseY - blockSize;
                     collisionXEnd = collisionXStart + ballSize;
@@ -644,16 +653,6 @@ class EditingStage {
                     }
                     JSONArray boostItemsJSON = nowStage.getJSONArray("boostItems");
                     for (int i = boostItemsJSON.size()-1; i >= 0; i--) {
-                    //     collisionX = boostItemsJSON.getJSONObject(i).getFloat("x");
-                    //     collisionY = totalHeight - boostItemsJSON.getJSONObject(i).getFloat("y") - baseY;
-                    //     if (collisionX - blockSize <= mouseX && mouseX < collisionX + blockSize && collisionY - blockSize <= mouseY && mouseY < collisionY + blockSize) {
-                    //         selectedEditingItem.add(boostItemsJSON.getJSONObject(i));
-                    //         println("add boostItem");
-                    //         selectedEditingItem.get(0).setString("type", "boostItem");
-                    //         boostItemsJSON.remove(i);
-                    //         nowStage.setJSONArray("boostItems", boostItemsJSON);
-                    //         return;
-                    //     }
                         collisionXStart = boostItemsJSON.getJSONObject(i).getFloat("x")-blockSize;
                         collisionYStart = totalHeight - boostItemsJSON.getJSONObject(i).getFloat("y") - baseY - blockSize;
                         collisionXEnd = collisionXStart + ballSize;
@@ -668,19 +667,10 @@ class EditingStage {
                             return;
                         }
                     }
-
-                    // collisionX = 0;
-                    // collisionY = totalHeight - nowStage.getJSONObject("acid").getFloat("y") - baseY;
                     collisionXStart = 0;
                     collisionYStart = totalHeight - nowStage.getJSONObject("acid").getFloat("y") - baseY;
                     collisionXEnd = width;
                     collisionYEnd = collisionYStart + blockSize;
-                    // if (collisionX <= mouseX && mouseX < width && collisionY <= mouseY && mouseY < collisionY + blockSize) {
-                    //     selectedEditingItem.add(nowStage.getJSONObject("acid"));
-                    //     println("add acid");
-                    //     selectedEditingItem.get(0).setString("type", "acid");
-                    //     return;
-                    // }
                     if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
                         selectedEditingItem.add(nowStage.getJSONObject("acid"));
                         println("add acid");
@@ -690,16 +680,6 @@ class EditingStage {
                     }
                     JSONArray platformsJSON = nowStage.getJSONArray("platforms");
                     for (int i = platformsJSON.size()-1; i >= 0; i--) {
-                    //     collisionX = platformsJSON.getJSONObject(i).getFloat("x");
-                    //     collisionY = totalHeight - platformsJSON.getJSONObject(i).getFloat("y") - baseY;
-                    //     if (collisionX <= mouseX && mouseX < collisionX + blockSize*platformsJSON.getJSONObject(i).getInt("w") && collisionY <= mouseY && mouseY < collisionY + blockSize) {
-                    //         selectedEditingItem.add(platformsJSON.getJSONObject(i));
-                    //         println("add platform");
-                    //         selectedEditingItem.get(0).setString("type", "platform");
-                    //         platformsJSON.remove(i);
-                    //         nowStage.setJSONArray("platforms", platformsJSON);
-                    //         return;
-                    //     }
                         collisionXStart = platformsJSON.getJSONObject(i).getFloat("x");
                         collisionYStart = totalHeight - platformsJSON.getJSONObject(i).getFloat("y") - baseY;
                         collisionXEnd = collisionXStart + blockSize*platformsJSON.getJSONObject(i).getInt("w");
@@ -716,16 +696,6 @@ class EditingStage {
                     }
                     JSONArray movePlatformsJSON = nowStage.getJSONArray("movePlatforms");
                     for (int i = movePlatformsJSON.size()-1; i >= 0; i--) {
-                    //     collisionX = movePlatformsJSON.getJSONObject(i).getFloat("x");
-                    //     collisionY = totalHeight - movePlatformsJSON.getJSONObject(i).getFloat("y") - baseY;
-                    //     if (collisionX <= mouseX && mouseX < collisionX + blockSize*movePlatformsJSON.getJSONObject(i).getInt("w") && collisionY <= mouseY && mouseY < collisionY + blockSize) {
-                    //         selectedEditingItem.add(movePlatformsJSON.getJSONObject(i));
-                    //         println("add movePlatform");
-                    //         selectedEditingItem.get(0).setString("type", "movePlatform");
-                    //         movePlatformsJSON.remove(i);
-                    //         nowStage.setJSONArray("movePlatforms", movePlatformsJSON);
-                    //         return;
-                    //     }
                         collisionXStart = movePlatformsJSON.getJSONObject(i).getFloat("x");
                         collisionYStart = totalHeight - movePlatformsJSON.getJSONObject(i).getFloat("y") - baseY;
                         collisionXEnd = collisionXStart + blockSize*movePlatformsJSON.getJSONObject(i).getInt("w");
@@ -741,70 +711,35 @@ class EditingStage {
                         }
                     }
                 } else {
-                    // if (selectedEditingItem.get(0).getString("type") == "player") {
-                    //     collisionXStart = selectedEditingItem.get(0).getFloat("x")-blockSize;
-                    //     collisionYStart = totalHeight - selectedEditingItem.get(0).getFloat("y") - baseY;
-                    //     collisionXEnd = collisionXStart + blockSize;
-                    //     collisionYEnd = collisionYStart + blockSize;
-                    //     if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
-                    //         selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
-                    //         selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")+mouseVY);
-                    //     }
-                    // } else if (selectedEditingItem.get(0).getString("type") == "goal") {
-                    //     collisionXStart = selectedEditingItem.get(0).getFloat("x")-blockSize;
-                    //     collisionYStart = totalHeight - selectedEditingItem.get(0).getFloat("y") - baseY;
-                    //     collisionXEnd = collisionXStart + blockSize;
-                    //     collisionYEnd = collisionYStart + blockSize;
-                    //     if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
-                    //         selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
-                    //         selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")+mouseVY);
-                    //     }
-                    // } else if (selectedEditingItem.get(0).getString("type") == "boostItem") {
-                    //     collisionXStart = selectedEditingItem.get(0).getFloat("x")-blockSize;
-                    //     collisionYStart = totalHeight - selectedEditingItem.get(0).getFloat("y") - baseY;
-                    //     collisionXEnd = collisionXStart + blockSize;
-                    //     collisionYEnd = collisionYStart + blockSize;
-                    //     if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
-                    //         selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
-                    //         selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")+mouseVY);
-                    //     }
-                    // } else if (selectedEditingItem.get(0).getString("type") == "acid") {
-                    //     collisionXStart = 0;
-                    //     collisionYStart = totalHeight - selectedEditingItem.get(0).getFloat("y") - baseY;
-                    //     collisionXEnd = width;
-                    //     collisionYEnd = collisionYStart + blockSize;
-                    //     if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
-                    //         selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")+mouseVY);
-                    //     }
-                    // } else if (selectedEditingItem.get(0).getString("type") == "platform") {
-                    //     collisionXStart = selectedEditingItem.get(0).getFloat("x");
-                    //     collisionYStart = totalHeight - selectedEditingItem.get(0).getFloat("y") - baseY;
-                    //     collisionXEnd = collisionXStart + blockSize*selectedEditingItem.get(0).getInt("w");
-                    //     collisionYEnd = collisionYStart + blockSize;
-                    //     if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
-                    //         selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
-                    //         selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")+mouseVY);
-                    //     }
-                    // } else if (selectedEditingItem.get(0).getString("type") == "movePlatform") {
-                    //     collisionXStart = selectedEditingItem.get(0).getFloat("x");
-                    //     collisionYStart = totalHeight - selectedEditingItem.get(0).getFloat("y") - baseY;
-                    //     collisionXEnd = collisionXStart + blockSize*selectedEditingItem.get(0).getInt("w");
-                    //     collisionYEnd = collisionYStart + blockSize;
-                    //     if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
-                    //         selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
-                    //         selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")+mouseVY);
-                    //     }
-                    // }
-                    float nowCollisionXStart = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("collisionXStart");
-                    float nowCollisionYStart = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("collisionYStart");
-                    float nowCollisionXEnd = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("collisionXEnd");
-                    float nowCollisionYEnd = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("collisionYEnd");
-                    if (nowCollisionXStart <= mouseX && mouseX < nowCollisionXEnd && nowCollisionYStart <= mouseY && mouseY < nowCollisionYEnd) {
-                        selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
-                        selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")+mouseVY);
+                    collisionXStart = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("collisionXStart");
+                    collisionYStart = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("collisionYStart");
+                    collisionXEnd = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("collisionXEnd");
+                    collisionYEnd = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("collisionYEnd");
+                    leftCollisionXStart = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("leftCollisionXStart");
+                    leftCollisionXEnd = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("leftCollisionXEnd");
+                    rightCollisionXStart = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("rightCollisionXStart");
+                    rightCollisionXEnd = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("rightCollisionXEnd");
+                    if (((collisionXStart <= mousePX && mousePX < collisionXEnd) || (leftCollisionXStart <= mousePX && mousePX < leftCollisionXEnd) || (rightCollisionXStart <= mousePX && mousePX < rightCollisionXEnd)) && collisionYStart <= mousePY && mousePY < collisionYEnd) {
+                        collisionXStart += mouseVX;
+                        collisionYStart += mouseVY;
+                        collisionXEnd += mouseVX;
+                        collisionYEnd += mouseVY;
+                        float meanCollisionX = (collisionXStart + collisionXEnd) / 2;
+                        if (meanCollisionX < 0) {
+                            collisionXStart += width;
+                            collisionXEnd += width;
+                            selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX+width);
+                        } else if (meanCollisionX >= width) {
+                            collisionXStart -= width;
+                            collisionXEnd -= width;
+                            selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX-width);
+                        } else {
+                            selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
+                        }
+                        selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")-mouseVY);
+                        setColPos();
                     }
                 }
-
             }
         } else if(scene == EDITGAME) {
             gameCollision();
@@ -827,30 +762,29 @@ class EditingStage {
 
             JSONObject displayStage = JSONObject.parse(nowStage.toString());
             if (selectedEditingItem.size() > 0) {
-                text("selected", 10, 50);
-
-                String type = selectedEditingItem.get(0).getString("type");
-                if (type == "player") {
-                    selectedEditingItem.get(0).remove("type");
-                    displayStage.setJSONObject("player", selectedEditingItem.get(0));
-                } else if (type == "goal") {
-                    selectedEditingItem.get(0).remove("type");
-                    displayStage.setJSONObject("goal", selectedEditingItem.get(0));
-                } else if (type == "boostItem") {
-                    selectedEditingItem.get(0).remove("type");
-                    displayStage.getJSONArray("boostItems").append(selectedEditingItem.get(0));
-                } else if (type == "acid") {
-                    selectedEditingItem.get(0).remove("type");
-                    displayStage.setJSONObject("acid", selectedEditingItem.get(0));
-                } else if (type == "platform") {
-                    selectedEditingItem.get(0).remove("type");
-                    displayStage.getJSONArray("platforms").append(selectedEditingItem.get(0));
-                } else if (type == "movePlatform") {
-                    selectedEditingItem.get(0).remove("type");
-                    displayStage.getJSONArray("movePlatforms").append(selectedEditingItem.get(0));
+                JSONObject selectedItem = JSONObject.parse(selectedEditingItem.get(0).toString());
+                String type = selectedItem.getString("type");
+                if (type.equals("player")) {
+                    displayStage.setJSONObject("player", selectedItem);
+                } else if (type.equals("goal")) {
+                    displayStage.setJSONObject("goal", selectedItem);
+                } else if (type.equals("boostItem")) {
+                    displayStage.getJSONArray("boostItems").append(selectedItem);
+                } else if (type.equals("acid")) {
+                    displayStage.setJSONObject("acid", selectedItem);
+                } else if (type.equals("platform")) {
+                    displayStage.getJSONArray("platforms").append(selectedItem);
+                } else if (type.equals("movePlatform")) {
+                    displayStage.getJSONArray("movePlatforms").append(selectedItem);
                 }
-                fill(255, 0, 0);
-                rect(collisionXStart, collisionYStart, collisionXEnd - collisionXStart, collisionYEnd - collisionYStart);
+                noFill();
+                stroke(255, 0, 0);
+                rect(collisionXStart - 1, collisionYStart - 1, collisionXEnd - collisionXStart + 1, collisionYEnd - collisionYStart + 1);
+                stroke(0, 255, 0);
+                rect(leftCollisionXStart - 1, collisionYStart - 1, leftCollisionXEnd - leftCollisionXStart + 1, collisionYEnd - collisionYStart + 1);
+                stroke(255, 255, 0);
+                rect(rightCollisionXStart - 1, collisionYStart - 1, rightCollisionXEnd - rightCollisionXStart + 1, collisionYEnd - collisionYStart + 1);
+                noStroke();
             }
             stages.clear();
             stages.add(displayStage);
@@ -875,17 +809,57 @@ class EditingStage {
             }
         }
         noStroke();
+
+        textSize(20);
+        fill(255);
+        text(selectedEditingItem.size(), 10, 10);
     }
 
     void startPlayStage() {
-
+        if (selectedEditingItem.size() > 0) {
+            JSONObject selectedItem = JSONObject.parse(selectedEditingItem.get(0).toString());
+            String type = selectedItem.getString("type");
+            if (type.equals("player")) {
+                nowStage.setJSONObject("player", selectedItem);
+            } else if (type.equals("goal")) {
+                nowStage.setJSONObject("goal", selectedItem);
+            } else if (type.equals("boostItem")) {
+                nowStage.getJSONArray("boostItems").append(selectedItem);
+            } else if (type.equals("acid")) {
+                nowStage.setJSONObject("acid", selectedItem);
+            } else if (type.equals("platform")) {
+                nowStage.getJSONArray("platforms").append(selectedItem);
+            } else if (type.equals("movePlatform")) {
+                nowStage.getJSONArray("movePlatforms").append(selectedItem);
+            }
+        }
         stages.clear();
         stages.add(nowStage);
+        selectedEditingItem.clear();
         loadStage(0);
     }
 
     void saveEditStage() {
-
+        JSONObject saveStage = JSONObject.parse(nowStage.toString());
+        if (selectedEditingItem.size() > 0) {
+            JSONObject selectedItem = JSONObject.parse(selectedEditingItem.get(0).toString());
+            String type = selectedItem.getString("type");
+            selectedItem.remove("type");
+            selectedItem.remove("colPos");
+            if (type.equals("player")) {
+                saveStage.setJSONObject("player", selectedItem);
+            } else if (type.equals("goal")) {
+                saveStage.setJSONObject("goal", selectedItem);
+            } else if (type.equals("boostItem")) {
+                saveStage.getJSONArray("boostItems").append(selectedItem);
+            } else if (type.equals("acid")) {
+                saveStage.setJSONObject("acid", selectedItem);
+            } else if (type.equals("platform")) {
+                saveStage.getJSONArray("platforms").append(selectedItem);
+            } else if (type.equals("movePlatform")) {
+                saveStage.getJSONArray("movePlatforms").append(selectedItem);
+            }
+        }
     }
 }
 
@@ -898,7 +872,9 @@ void loadStage(int num) {
     JSONArray movePlatformsJSON = stage.getJSONArray("movePlatforms");
     JSONArray boostItemsJSON = stage.getJSONArray("boostItems");
 
-    stars.clear();
+    if (scene != EDIT && scene != EDITGAME && scene != EDITDEAD && scene != EDITINFO) {
+        stars.clear();
+    }
     platforms.clear();
     movePlatforms.clear();
     boostItems.clear();
@@ -913,7 +889,14 @@ void loadStage(int num) {
     if (totalHeight < height) {
         totalHeight = height;
     }
-    baseY = totalHeight - height;
+    if (scene != EDIT && scene != EDITGAME && scene != EDITDEAD && scene != EDITINFO) {
+        baseY = totalHeight - height;
+    }
+    if (baseY < 0) {
+        baseY = 0;
+    } else if (baseY > totalHeight - height) {
+        baseY = totalHeight - height;
+    }
     
     player = new Player(playerJSON.getFloat("x"), totalHeight - playerJSON.getFloat("y"));
     player.maxVelocity = playerJSON.getFloat("v");
@@ -926,8 +909,10 @@ void loadStage(int num) {
     goal = new GoalItem(stage.getJSONObject("goal").getFloat("x"), totalHeight - stage.getJSONObject("goal").getFloat("y"));
     // platforms.add(new Platform(0, totalHeight - blockSize*6, width/blockSize));
     acid = new Acid(totalHeight - stage.getJSONObject("acid").getFloat("y"), stage.getJSONObject("acid").getFloat("vy"));
-    for (int i = 0; i < stage.getInt("starNum"); i++) {
-        stars.add(new Star());
+    if (scene != EDIT && scene != EDITGAME && scene != EDITDEAD && scene != EDITINFO) {
+        for (int i = 0; i < stage.getInt("starNum"); i++) {
+            stars.add(new Star());
+        }
     }
     for (int i = 0; i < platformsJSON.size(); i++) {
         JSONObject platformJSON = platformsJSON.getJSONObject(i);
@@ -1051,6 +1036,9 @@ void setup() {
 
 boolean wasSpaceKeyPressed = false;
 void draw() {
+    mouseVX = mouseX - mousePX;
+    mouseVY = mouseY - mousePY;
+
     if (scene == GAME || scene == GOAL || scene == DEAD || scene == PAUSE || scene == EDIT || scene == EDITGAME || scene == EDITDEAD || scene == EDITINFO) {
         background(gameBGColor);
     } else {
@@ -1059,12 +1047,14 @@ void draw() {
 
     if (scene == GOAL || scene == DEAD || scene == EDITDEAD) {
         if (waitFrame > fps*3/2) {
-            loadStage(stageNum);
             if (scene == GOAL) {
+                loadStage(stageNum);
                 scene = GAME;
             } else if (scene == DEAD) {
+                loadStage(stageNum);
                 scene = GAME;
             } else if (scene == EDITDEAD) {
+                loadStage(0);
                 scene = EDIT;
             }
             waitFrame = 0;
@@ -1122,7 +1112,6 @@ void draw() {
                 isFocusStages = false;
                 selectedJsonNum = 0;
             }
-            coditionToExit = false;
         }
         
     }
@@ -1201,7 +1190,6 @@ void draw() {
         if (keyCoolCount < 0 && keys[ESC]) {
             keyCoolCount = keyCoolFrame;
             scene = MAIN;
-            coditionToExit = true;
         }
     }
 
@@ -1330,7 +1318,6 @@ void draw() {
             keyCoolCount = keyCoolFrame;
             if (selectedMainNum == 0 || selectedMainNum == 1) {
                 scene = MAIN;
-                coditionToExit = true;
             } else if (selectedMainNum == 2 || selectedMainNum == 4) {
                 scene = MENU;
                 isFocusStages = false;
@@ -1349,6 +1336,7 @@ void draw() {
             keyCoolCount = keyCoolFrame;
             scene = EDITINFO;
         }
+        editingStage.collision();
     }
     if (scene == EDITGAME) {
         editingStage.collision();
@@ -1364,7 +1352,6 @@ void draw() {
         if (keyCoolCount < 0 && keys[ESC]) {
             keyCoolCount = keyCoolFrame;
             scene = MAIN;
-            coditionToExit = true;
         }
     }
 
@@ -1546,11 +1533,6 @@ void draw() {
         ellipse(mouseX, mouseY, 10, 10);
     }
 
-    fill(255);
-    text(editingStage.selectedEditingItem.size(), 10, 10);
-
-    mouseVX = mouseX - mousePX;
-    mouseVY = mouseY - mousePY;
     mousePX = mouseX;
     mousePY = mouseY;
     keyCoolCount--;
