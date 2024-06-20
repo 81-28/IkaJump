@@ -14,12 +14,13 @@ String folderPath;
 // folderPath = sketchPath("STAGESs"); setupで設定,相対パスにするとエラー
 JSONObject stagess = new JSONObject();
 ArrayList<JSONObject> allStages = new ArrayList<JSONObject>();
+JSONObject templateStage;
 
-JSONObject editingStage;
-JSONObject selectedEditingItem;
-JSONArray editingPlatforms;
-JSONArray editingMove;
-JSONArray editingItems;
+// JSONObject editingStage;
+// JSONObject selectedEditingItem;
+// JSONArray editingPlatforms;
+// JSONArray editingMove;
+// JSONArray editingItems;
 
 boolean isFocusStages = false;
 ArrayList<String> jsonNames = new ArrayList<String>();
@@ -32,7 +33,16 @@ String selectedStageName = "";
 int fps = 60;
 int waitFrame = 0;
 boolean[] keys = new boolean[128];
+boolean isInputting = false;
+String inputString = "";
+String inputPlace = "";
 boolean coditionToExit = true;
+boolean leftMousePressed = false;
+boolean rightMousePressed = false;
+float mousePX = 0;
+float mousePY = 0;
+float mouseVX = 0;
+float mouseVY = 0;
 final int keyCoolFrame = fps/6;
 int keyCoolCount = keyCoolFrame;
 color bgColor = color(31, 31, 95);
@@ -54,6 +64,9 @@ final int MENU = 5;
 final int STAGEMENU = 6;
 final int EDITMENU = 7;
 final int EDIT = 8;
+final int EDITGAME = 9;
+final int EDITINFO = 10;
+final int EDITDEAD = 11;
 int scene = MAIN;
 
 int selectedMainNum = 0;
@@ -175,6 +188,24 @@ void keyReleased() {
     }
 }
 
+void mousePressed() {
+    if (mouseButton == LEFT) {
+        leftMousePressed = true;
+    }
+    if (mouseButton == RIGHT) {
+        rightMousePressed = true;
+    }
+}
+
+void mouseReleased() {
+    if (mouseButton == LEFT) {
+        leftMousePressed = false;
+    }
+    if (mouseButton == RIGHT) {
+        rightMousePressed = false;
+    }
+}
+
 void mouseWheel(MouseEvent event) {
     int e = event.getCount();
     if (scene == MENU) {
@@ -255,7 +286,11 @@ class Player {
 
     void goal() {
         sounds.get("clear").play();
-        scene = GOAL;
+        if (scene == GAME) {
+            scene = GOAL;
+        } else if (scene == EDITGAME) {
+            scene = EDIT;
+        }
         stageNum++;
         if (selectedMainNum == 0 || selectedMainNum == 1) {
             allStageNum = stageNum;
@@ -269,7 +304,11 @@ class Player {
         sounds.get("dead").play();
         vy = 0;
         status = "dead";
-        scene = DEAD;
+        if (scene == GAME) {
+            scene = DEAD;
+        } else if (scene == EDITGAME) {
+            scene = EDITDEAD;
+        }
     }
 
     void update() {
@@ -534,6 +573,323 @@ class Acid extends Platform {
     }
 }
 
+class EditingStage {
+    JSONObject nowStage;
+    ArrayList<JSONObject> selectedEditingItem = new ArrayList<JSONObject>();
+    // JSONObject player, goal, acid;
+    // JSONArray platforms, movePlatforms, boostItems;
+    float collisionXStart, collisionYStart, collisionXEnd, collisionYEnd;
+    EditingStage(JSONObject stage) {
+        this.nowStage = stage;
+        // this.player = stage.getJSONObject("player");
+        // this.goal = stage.getJSONObject("goal");
+        // this.acid = stage.getJSONObject("acid");
+        // this.platforms = stage.getJSONArray("platforms");
+        // this.movePlatforms = stage.getJSONArray("movePlatforms");
+        // this.boostItems = stage.getJSONArray("boostItems");
+    }
+
+    void setColPos() {
+        JSONObject colPos = new JSONObject();
+        colPos.setFloat("collisionXStart", collisionXStart);
+        colPos.setFloat("collisionYStart", collisionYStart);
+        colPos.setFloat("collisionXEnd", collisionXEnd);
+        colPos.setFloat("collisionYEnd", collisionYEnd);
+        nowStage.setJSONObject("colPos", colPos);
+    }
+
+    void collision() {
+        if (scene == EDIT) {
+            if (leftMousePressed) {
+                if (selectedEditingItem.size() == 0) {
+                    // float collisionX = 0;
+                    // float collisionY = 0;
+                    // collisionX = nowStage.getJSONObject("player").getFloat("x");
+                    // collisionY = totalHeight - nowStage.getJSONObject("player").getFloat("y") - baseY;
+                    collisionXStart = nowStage.getJSONObject("player").getFloat("x")-blockSize;
+                    collisionYStart = totalHeight - nowStage.getJSONObject("player").getFloat("y") - baseY - blockSize;
+                    collisionXEnd = collisionXStart + ballSize;
+                    collisionYEnd = collisionYStart + ballSize;
+                    // if (collisionX - blockSize <= mouseX && mouseX < collisionX + blockSize && collisionY - blockSize <= mouseY && mouseY < collisionY + blockSize) {
+                    //     selectedEditingItem.add(nowStage.getJSONObject("player"));
+                    //     println("add player");
+                    //     selectedEditingItem.get(0).setString("type", "player");
+                    //     return;
+                    // }
+                    if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
+                        selectedEditingItem.add(nowStage.getJSONObject("player"));
+                        println("add player");
+                        selectedEditingItem.get(0).setString("type", "player");
+                        setColPos();
+                        return;
+                    }
+                    // collisionX = nowStage.getJSONObject("goal").getFloat("x");
+                    // collisionY = totalHeight - nowStage.getJSONObject("goal").getFloat("y") - baseY;
+                    // if (collisionX - blockSize <= mouseX && mouseX < collisionX + blockSize && collisionY - blockSize <= mouseY && mouseY < collisionY + blockSize) {
+                    //     selectedEditingItem.add(nowStage.getJSONObject("goal"));
+                    //     println("add goal");
+                    //     selectedEditingItem.get(0).setString("type", "goal");
+                    //     return;
+                    // }
+                    collisionXStart = nowStage.getJSONObject("goal").getFloat("x")-blockSize;
+                    collisionYStart = totalHeight - nowStage.getJSONObject("goal").getFloat("y") - baseY - blockSize;
+                    collisionXEnd = collisionXStart + ballSize;
+                    collisionYEnd = collisionYStart + ballSize;
+                    if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
+                        selectedEditingItem.add(nowStage.getJSONObject("goal"));
+                        println("add goal");
+                        selectedEditingItem.get(0).setString("type", "goal");
+                        setColPos();
+                        return;
+                    }
+                    JSONArray boostItemsJSON = nowStage.getJSONArray("boostItems");
+                    for (int i = boostItemsJSON.size()-1; i >= 0; i--) {
+                    //     collisionX = boostItemsJSON.getJSONObject(i).getFloat("x");
+                    //     collisionY = totalHeight - boostItemsJSON.getJSONObject(i).getFloat("y") - baseY;
+                    //     if (collisionX - blockSize <= mouseX && mouseX < collisionX + blockSize && collisionY - blockSize <= mouseY && mouseY < collisionY + blockSize) {
+                    //         selectedEditingItem.add(boostItemsJSON.getJSONObject(i));
+                    //         println("add boostItem");
+                    //         selectedEditingItem.get(0).setString("type", "boostItem");
+                    //         boostItemsJSON.remove(i);
+                    //         nowStage.setJSONArray("boostItems", boostItemsJSON);
+                    //         return;
+                    //     }
+                        collisionXStart = boostItemsJSON.getJSONObject(i).getFloat("x")-blockSize;
+                        collisionYStart = totalHeight - boostItemsJSON.getJSONObject(i).getFloat("y") - baseY - blockSize;
+                        collisionXEnd = collisionXStart + ballSize;
+                        collisionYEnd = collisionYStart + ballSize;
+                        if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
+                            selectedEditingItem.add(boostItemsJSON.getJSONObject(i));
+                            println("add boostItem");
+                            selectedEditingItem.get(0).setString("type", "boostItem");
+                            boostItemsJSON.remove(i);
+                            nowStage.setJSONArray("boostItems", boostItemsJSON);
+                            setColPos();
+                            return;
+                        }
+                    }
+
+                    // collisionX = 0;
+                    // collisionY = totalHeight - nowStage.getJSONObject("acid").getFloat("y") - baseY;
+                    collisionXStart = 0;
+                    collisionYStart = totalHeight - nowStage.getJSONObject("acid").getFloat("y") - baseY;
+                    collisionXEnd = width;
+                    collisionYEnd = collisionYStart + blockSize;
+                    // if (collisionX <= mouseX && mouseX < width && collisionY <= mouseY && mouseY < collisionY + blockSize) {
+                    //     selectedEditingItem.add(nowStage.getJSONObject("acid"));
+                    //     println("add acid");
+                    //     selectedEditingItem.get(0).setString("type", "acid");
+                    //     return;
+                    // }
+                    if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
+                        selectedEditingItem.add(nowStage.getJSONObject("acid"));
+                        println("add acid");
+                        selectedEditingItem.get(0).setString("type", "acid");
+                        setColPos();
+                        return;
+                    }
+                    JSONArray platformsJSON = nowStage.getJSONArray("platforms");
+                    for (int i = platformsJSON.size()-1; i >= 0; i--) {
+                    //     collisionX = platformsJSON.getJSONObject(i).getFloat("x");
+                    //     collisionY = totalHeight - platformsJSON.getJSONObject(i).getFloat("y") - baseY;
+                    //     if (collisionX <= mouseX && mouseX < collisionX + blockSize*platformsJSON.getJSONObject(i).getInt("w") && collisionY <= mouseY && mouseY < collisionY + blockSize) {
+                    //         selectedEditingItem.add(platformsJSON.getJSONObject(i));
+                    //         println("add platform");
+                    //         selectedEditingItem.get(0).setString("type", "platform");
+                    //         platformsJSON.remove(i);
+                    //         nowStage.setJSONArray("platforms", platformsJSON);
+                    //         return;
+                    //     }
+                        collisionXStart = platformsJSON.getJSONObject(i).getFloat("x");
+                        collisionYStart = totalHeight - platformsJSON.getJSONObject(i).getFloat("y") - baseY;
+                        collisionXEnd = collisionXStart + blockSize*platformsJSON.getJSONObject(i).getInt("w");
+                        collisionYEnd = collisionYStart + blockSize;
+                        if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
+                            selectedEditingItem.add(platformsJSON.getJSONObject(i));
+                            println("add platform");
+                            selectedEditingItem.get(0).setString("type", "platform");
+                            platformsJSON.remove(i);
+                            nowStage.setJSONArray("platforms", platformsJSON);
+                            setColPos();
+                            return;
+                        }
+                    }
+                    JSONArray movePlatformsJSON = nowStage.getJSONArray("movePlatforms");
+                    for (int i = movePlatformsJSON.size()-1; i >= 0; i--) {
+                    //     collisionX = movePlatformsJSON.getJSONObject(i).getFloat("x");
+                    //     collisionY = totalHeight - movePlatformsJSON.getJSONObject(i).getFloat("y") - baseY;
+                    //     if (collisionX <= mouseX && mouseX < collisionX + blockSize*movePlatformsJSON.getJSONObject(i).getInt("w") && collisionY <= mouseY && mouseY < collisionY + blockSize) {
+                    //         selectedEditingItem.add(movePlatformsJSON.getJSONObject(i));
+                    //         println("add movePlatform");
+                    //         selectedEditingItem.get(0).setString("type", "movePlatform");
+                    //         movePlatformsJSON.remove(i);
+                    //         nowStage.setJSONArray("movePlatforms", movePlatformsJSON);
+                    //         return;
+                    //     }
+                        collisionXStart = movePlatformsJSON.getJSONObject(i).getFloat("x");
+                        collisionYStart = totalHeight - movePlatformsJSON.getJSONObject(i).getFloat("y") - baseY;
+                        collisionXEnd = collisionXStart + blockSize*movePlatformsJSON.getJSONObject(i).getInt("w");
+                        collisionYEnd = collisionYStart + blockSize;
+                        if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
+                            selectedEditingItem.add(movePlatformsJSON.getJSONObject(i));
+                            println("add movePlatform");
+                            selectedEditingItem.get(0).setString("type", "movePlatform");
+                            movePlatformsJSON.remove(i);
+                            nowStage.setJSONArray("movePlatforms", movePlatformsJSON);
+                            setColPos();
+                            return;
+                        }
+                    }
+                } else {
+                    // if (selectedEditingItem.get(0).getString("type") == "player") {
+                    //     collisionXStart = selectedEditingItem.get(0).getFloat("x")-blockSize;
+                    //     collisionYStart = totalHeight - selectedEditingItem.get(0).getFloat("y") - baseY;
+                    //     collisionXEnd = collisionXStart + blockSize;
+                    //     collisionYEnd = collisionYStart + blockSize;
+                    //     if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
+                    //         selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
+                    //         selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")+mouseVY);
+                    //     }
+                    // } else if (selectedEditingItem.get(0).getString("type") == "goal") {
+                    //     collisionXStart = selectedEditingItem.get(0).getFloat("x")-blockSize;
+                    //     collisionYStart = totalHeight - selectedEditingItem.get(0).getFloat("y") - baseY;
+                    //     collisionXEnd = collisionXStart + blockSize;
+                    //     collisionYEnd = collisionYStart + blockSize;
+                    //     if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
+                    //         selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
+                    //         selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")+mouseVY);
+                    //     }
+                    // } else if (selectedEditingItem.get(0).getString("type") == "boostItem") {
+                    //     collisionXStart = selectedEditingItem.get(0).getFloat("x")-blockSize;
+                    //     collisionYStart = totalHeight - selectedEditingItem.get(0).getFloat("y") - baseY;
+                    //     collisionXEnd = collisionXStart + blockSize;
+                    //     collisionYEnd = collisionYStart + blockSize;
+                    //     if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
+                    //         selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
+                    //         selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")+mouseVY);
+                    //     }
+                    // } else if (selectedEditingItem.get(0).getString("type") == "acid") {
+                    //     collisionXStart = 0;
+                    //     collisionYStart = totalHeight - selectedEditingItem.get(0).getFloat("y") - baseY;
+                    //     collisionXEnd = width;
+                    //     collisionYEnd = collisionYStart + blockSize;
+                    //     if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
+                    //         selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")+mouseVY);
+                    //     }
+                    // } else if (selectedEditingItem.get(0).getString("type") == "platform") {
+                    //     collisionXStart = selectedEditingItem.get(0).getFloat("x");
+                    //     collisionYStart = totalHeight - selectedEditingItem.get(0).getFloat("y") - baseY;
+                    //     collisionXEnd = collisionXStart + blockSize*selectedEditingItem.get(0).getInt("w");
+                    //     collisionYEnd = collisionYStart + blockSize;
+                    //     if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
+                    //         selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
+                    //         selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")+mouseVY);
+                    //     }
+                    // } else if (selectedEditingItem.get(0).getString("type") == "movePlatform") {
+                    //     collisionXStart = selectedEditingItem.get(0).getFloat("x");
+                    //     collisionYStart = totalHeight - selectedEditingItem.get(0).getFloat("y") - baseY;
+                    //     collisionXEnd = collisionXStart + blockSize*selectedEditingItem.get(0).getInt("w");
+                    //     collisionYEnd = collisionYStart + blockSize;
+                    //     if (collisionXStart <= mouseX && mouseX < collisionXEnd && collisionYStart <= mouseY && mouseY < collisionYEnd) {
+                    //         selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
+                    //         selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")+mouseVY);
+                    //     }
+                    // }
+                    float nowCollisionXStart = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("collisionXStart");
+                    float nowCollisionYStart = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("collisionYStart");
+                    float nowCollisionXEnd = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("collisionXEnd");
+                    float nowCollisionYEnd = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("collisionYEnd");
+                    if (nowCollisionXStart <= mouseX && mouseX < nowCollisionXEnd && nowCollisionYStart <= mouseY && mouseY < nowCollisionYEnd) {
+                        selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
+                        selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")+mouseVY);
+                    }
+                }
+
+            }
+        } else if(scene == EDITGAME) {
+            gameCollision();
+        }
+    }
+
+    void display() {
+        if (scene == EDIT) {
+            stroke(0, 63);
+            for (int y = 0; y < totalHeight; y+=blockSize) {
+                float drawY = y - baseY;
+                if (-blockSize <= drawY && drawY < height+blockSize) {
+                    line(0, drawY, width, drawY);
+                }
+            }
+            for (int x = 0; x < width; x+=blockSize) {
+                line(x, 0, x, height);
+            }
+            noStroke();
+
+            JSONObject displayStage = JSONObject.parse(nowStage.toString());
+            if (selectedEditingItem.size() > 0) {
+                text("selected", 10, 50);
+
+                String type = selectedEditingItem.get(0).getString("type");
+                if (type == "player") {
+                    selectedEditingItem.get(0).remove("type");
+                    displayStage.setJSONObject("player", selectedEditingItem.get(0));
+                } else if (type == "goal") {
+                    selectedEditingItem.get(0).remove("type");
+                    displayStage.setJSONObject("goal", selectedEditingItem.get(0));
+                } else if (type == "boostItem") {
+                    selectedEditingItem.get(0).remove("type");
+                    displayStage.getJSONArray("boostItems").append(selectedEditingItem.get(0));
+                } else if (type == "acid") {
+                    selectedEditingItem.get(0).remove("type");
+                    displayStage.setJSONObject("acid", selectedEditingItem.get(0));
+                } else if (type == "platform") {
+                    selectedEditingItem.get(0).remove("type");
+                    displayStage.getJSONArray("platforms").append(selectedEditingItem.get(0));
+                } else if (type == "movePlatform") {
+                    selectedEditingItem.get(0).remove("type");
+                    displayStage.getJSONArray("movePlatforms").append(selectedEditingItem.get(0));
+                }
+                fill(255, 0, 0);
+                rect(collisionXStart, collisionYStart, collisionXEnd - collisionXStart, collisionYEnd - collisionYStart);
+            }
+            stages.clear();
+            stages.add(displayStage);
+            loadStage(0);
+            gameDisplay();
+        } else if(scene == EDITGAME || scene == EDITDEAD) {
+            gameDisplay();
+        } else if(scene == EDITINFO) {
+
+        }
+        fill(0);
+        textSize(10);
+        textAlign(LEFT, CENTER);
+        line(0, 0, 0, height);
+        stroke(0);
+        for (int y = 0; y < totalHeight+blockSize; y+=ballSize) {
+            float drawY = y - baseY;
+            if (-blockSize <= drawY && drawY < height+blockSize) {
+                fill(255);
+                line(0, drawY, blockSize, drawY);
+                text(totalHeight-y, blockSize, drawY);
+            }
+        }
+        noStroke();
+    }
+
+    void startPlayStage() {
+
+        stages.clear();
+        stages.add(nowStage);
+        loadStage(0);
+    }
+
+    void saveEditStage() {
+
+    }
+}
+
+
 void loadStage(int num) {
     JSONObject stage = stages.get(num);
 
@@ -547,9 +903,9 @@ void loadStage(int num) {
     movePlatforms.clear();
     boostItems.clear();
 
-    stageName = stage.getString("stageName");
-    author = stage.getString("author");
-    difficulty = stage.getInt("difficulty");
+    nowStageName = stage.getString("stageName");
+    nowAuthor = stage.getString("author");
+    nowDifficulty = stage.getInt("difficulty");
 
     String bgColorHex = stage.getString("bgColor").replace("#", "");
     gameBGColor = unhex(bgColorHex);
@@ -625,9 +981,9 @@ void gameDisplay() {
 }
 
 
-String stageName = "";
-String author = "";
-int difficulty = 0;
+String nowStageName = "";
+String nowAuthor = "";
+int nowDifficulty = 0;
 Player player;
 GoalItem goal;
 Acid acid;
@@ -636,6 +992,8 @@ ArrayList<BoostItem> boostItems = new ArrayList<BoostItem>();
 ArrayList<Platform> platforms = new ArrayList<Platform>();
 ArrayList<MovePlatform> movePlatforms = new ArrayList<MovePlatform>();
 
+EditingStage editingStage;
+
 void setup() {
     size(800, 700);
     frameRate(fps);
@@ -643,6 +1001,8 @@ void setup() {
     noStroke();
 
     folderPath = sketchPath("STAGESs");
+    templateStage = loadJSONObject("template.json").getJSONObject("template");
+    templateStage.setString("stageName", "template");
     // stages = loadJSONArray("stages.json");
     sounds.put("jump", new SoundFile(this, "sounds/jump.mp3"));
     sounds.put("clear", new SoundFile(this, "sounds/clear.mp3"));
@@ -678,6 +1038,8 @@ void setup() {
     jsonMenuStrings.add("Play");
     jsonMenuStrings.add("EditName");
     jsonMenuStrings.add("Copy");
+    
+    editingStage = new EditingStage(templateStage);
 
     loadJSONs();
     stages = new ArrayList<JSONObject>(allStages);
@@ -689,16 +1051,22 @@ void setup() {
 
 boolean wasSpaceKeyPressed = false;
 void draw() {
-    if (scene == GAME || scene == GOAL || scene == DEAD || scene == PAUSE || scene == EDIT) {
+    if (scene == GAME || scene == GOAL || scene == DEAD || scene == PAUSE || scene == EDIT || scene == EDITGAME || scene == EDITDEAD || scene == EDITINFO) {
         background(gameBGColor);
     } else {
         background(bgColor);
     }
 
-    if (scene == GOAL || scene == DEAD) {
+    if (scene == GOAL || scene == DEAD || scene == EDITDEAD) {
         if (waitFrame > fps*3/2) {
             loadStage(stageNum);
-            scene = GAME;
+            if (scene == GOAL) {
+                scene = GAME;
+            } else if (scene == DEAD) {
+                scene = GAME;
+            } else if (scene == EDITDEAD) {
+                scene = EDIT;
+            }
             waitFrame = 0;
         } else {
             waitFrame++;
@@ -726,24 +1094,30 @@ void draw() {
         if (keyCoolCount < 0 && (keys[ENTER] || keys[RETURN] || keys[' '] || keys[32])) {
             keyCoolCount = keyCoolFrame;
             if (selectedMainNum == 0) {
+                println("Play");
                 scene = GAME;
                 stages = new ArrayList<JSONObject>(allStages);
                 maxStageNum = stages.size() - 1;
                 stageNum = 0;
                 loadStage(stageNum);
             } else if (selectedMainNum == 1) {
+                println("Continue");
                 scene = GAME;
                 stages = new ArrayList<JSONObject>(allStages);
                 maxStageNum = stages.size() - 1;
                 stageNum = allStageNum;
                 loadStage(stageNum);
             } else if (selectedMainNum == 2) {
+                println("Select");
                 scene = MENU;
                 isFocusStages = false;
                 selectedJsonNum = 0;
             } else if (selectedMainNum == 3) {
-
+                println("New");
+                editingStage = new EditingStage(templateStage);
+                scene = EDIT;
             } else if (selectedMainNum == 4) {
+                println("Select");
                 scene = MENU;
                 isFocusStages = false;
                 selectedJsonNum = 0;
@@ -881,6 +1255,8 @@ void draw() {
                     loadStage(0);
                 } else if (selectedStageMenuNum == 1) {
                     println("Edit");
+                    editingStage = new EditingStage(stagess.getJSONObject(selectedJsonName).getJSONObject(selectedStageName));
+                    scene = EDIT;
                 } else if (selectedStageMenuNum == 2) {
                     println("Move");
                 } else if (selectedStageMenuNum == 3) {
@@ -915,7 +1291,7 @@ void draw() {
         }
     }
 
-    if (scene == GAME) {
+    if (scene == GAME || scene == EDITGAME) {
         player.move(0);
         if (keys['A'] || keys['a'] || keys[LEFT]) {
             player.move(-1);
@@ -935,9 +1311,15 @@ void draw() {
         }
         if (keyCoolCount < 0 && (keys[ESC] || keys['P'] || keys['p'])) {
             keyCoolCount = keyCoolFrame;
-            scene = PAUSE;
+            if (scene == GAME) {
+                scene = PAUSE;
+            } else if (scene == EDITGAME) {
+                scene = EDIT;
+            }
         }
-        gameCollision();
+        if (scene == GAME) {
+            gameCollision();
+        }
     }
     if (scene == PAUSE) {
         if (keyCoolCount < 0 && (keys[' '] || keys[32] || keys['P'] || keys['p'])) {
@@ -956,6 +1338,54 @@ void draw() {
             }
         }
     }
+
+    if (scene == EDIT) {
+        if (keyCoolCount < 0 && (keys[ENTER] || keys[RETURN] || keys[' '] || keys[32])) {
+            keyCoolCount = keyCoolFrame;
+            editingStage.startPlayStage();
+            scene = EDITGAME;
+        }
+        if (keyCoolCount < 0 && keys[ESC]) {
+            keyCoolCount = keyCoolFrame;
+            scene = EDITINFO;
+        }
+    }
+    if (scene == EDITGAME) {
+        editingStage.collision();
+    }
+    if (scene == EDITDEAD) {
+        editingStage.collision();
+    }
+    if (scene == EDITINFO) {
+        if (keyCoolCount < 0 && (keys[ENTER] || keys[RETURN] || keys[' '] || keys[32])) {
+            keyCoolCount = keyCoolFrame;
+            scene = EDIT;
+        }
+        if (keyCoolCount < 0 && keys[ESC]) {
+            keyCoolCount = keyCoolFrame;
+            scene = MAIN;
+            coditionToExit = true;
+        }
+    }
+
+    if (isInputting) {
+        // key
+
+        // if (keyCoolCount < 0 && (keys[' '] || keys[32])) {
+        //     keyCoolCount = keyCoolFrame;
+        //     if (scene == ) {
+                
+        //     }
+        // }
+        // if (keyCoolCount < 0 && keys[ESC]) {
+        //     keyCoolCount = keyCoolFrame;
+        //     if (scene == ) {
+                
+        //     }
+        // }
+    }
+
+
 
     if (scene == GAME || scene == GOAL || scene == DEAD || scene == PAUSE) {
         gameDisplay();
@@ -979,9 +1409,9 @@ void draw() {
         textSize(20);
         textAlign(CENTER, CENTER);
         text("Press Space/P Key to Resume", width/2, height/2);
-        text(stageName, width*0.1, height*0.1);
-        text(author, width*0.1, height*0.2);
-        text(difficulty, width*0.1, height*0.3);
+        text(nowStageName, width*0.1, height*0.1);
+        text(nowAuthor, width*0.1, height*0.2);
+        text(nowDifficulty, width*0.1, height*0.3);
 
     }
     if (scene == MAIN) {
@@ -1074,6 +1504,54 @@ void draw() {
             }
         }
     }
+    if (scene == EDIT) {
+        fill(255);
+        textSize(50);
+        textAlign(CENTER, CENTER);
+        text("EDIT", width/2, height/10);
+        editingStage.display();
+    }
+    if (scene == EDITGAME || scene == EDITDEAD) {
+        fill(255);
+        textSize(50);
+        textAlign(CENTER, CENTER);
+        text("EDIT GAME", width/2, height/10);
+        editingStage.display();
+    }
+    if (scene == EDITINFO) {
+        fill(255);
+        textSize(50);
+        textAlign(CENTER, CENTER);
+        text("EDIT INFO", width/2, height/10);
+        editingStage.display();
+    }
+    if (scene == EDITDEAD) {
+        fill(255);
+        textSize(50);
+        textAlign(CENTER, CENTER);
+        text("MISS!", width/2, height/2);
+        editingStage.display();
+    }
 
+    fill(255);
+    textSize(20);
+    text(scene, width-10, 10);
+
+    if (leftMousePressed) {
+        fill(0, 255, 0);
+        ellipse(mouseX, mouseY, 10, 10);
+    }
+    if (rightMousePressed) {
+        fill(0, 0, 255);
+        ellipse(mouseX, mouseY, 10, 10);
+    }
+
+    fill(255);
+    text(editingStage.selectedEditingItem.size(), 10, 10);
+
+    mouseVX = mouseX - mousePX;
+    mouseVY = mouseY - mousePY;
+    mousePX = mouseX;
+    mousePY = mouseY;
     keyCoolCount--;
 }
