@@ -16,12 +16,6 @@ JSONObject stagess = new JSONObject();
 ArrayList<JSONObject> allStages = new ArrayList<JSONObject>();
 JSONObject templateStage;
 
-// JSONObject editingStage;
-// JSONObject selectedEditingItem;
-// JSONArray editingPlatforms;
-// JSONArray editingMove;
-// JSONArray editingItems;
-
 boolean isFocusStages = false;
 ArrayList<String> jsonNames = new ArrayList<String>();
 int selectedJsonNum = 0;
@@ -67,6 +61,9 @@ final int EDITGAME = 9;
 final int EDITINFO = 10;
 final int EDITDEAD = 11;
 int scene = MAIN;
+int pastScene = MAIN;
+
+boolean firstEditLoad = true;
 
 int selectedMainNum = 0;
 ArrayList<JSONObject> mainMenuStrings = new ArrayList<JSONObject>();
@@ -228,7 +225,9 @@ void mouseWheel(MouseEvent event) {
         }
         editingStage.collisionYStart = pastCollisionYStart + (pastBaseY - baseY);
         editingStage.collisionYEnd = pastCollisionYEnd + (pastBaseY - baseY);
-        editingStage.setColPos();
+        if (editingStage.selectedEditingItem.size() > 0) {
+            editingStage.setColPos();
+        }
     }
 }
 
@@ -300,8 +299,10 @@ class Player {
     void goal() {
         sounds.get("clear").play();
         if (scene == GAME) {
+            pastScene = scene;
             scene = GOAL;
         } else if (scene == EDITGAME) {
+            pastScene = scene;
             scene = EDIT;
         }
         stageNum++;
@@ -318,8 +319,10 @@ class Player {
         vy = 0;
         status = "dead";
         if (scene == GAME) {
+            pastScene = scene;
             scene = DEAD;
         } else if (scene == EDITGAME) {
+            pastScene = scene;
             scene = EDITDEAD;
         }
     }
@@ -738,7 +741,9 @@ class EditingStage {
                         }
                         selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")-mouseVY);
                         setColPos();
+                        return;
                     }
+                    reloadEditingStage();
                 }
             }
         } else if(scene == EDITGAME) {
@@ -815,7 +820,7 @@ class EditingStage {
         text(selectedEditingItem.size(), 10, 10);
     }
 
-    void startPlayStage() {
+    void reloadEditingStage() {
         if (selectedEditingItem.size() > 0) {
             JSONObject selectedItem = JSONObject.parse(selectedEditingItem.get(0).toString());
             String type = selectedItem.getString("type");
@@ -872,7 +877,7 @@ void loadStage(int num) {
     JSONArray movePlatformsJSON = stage.getJSONArray("movePlatforms");
     JSONArray boostItemsJSON = stage.getJSONArray("boostItems");
 
-    if (scene != EDIT && scene != EDITGAME && scene != EDITDEAD && scene != EDITINFO) {
+    if (!(scene == EDIT || scene == EDITGAME || scene == EDITDEAD || scene == EDITINFO)) {
         stars.clear();
     }
     platforms.clear();
@@ -889,8 +894,9 @@ void loadStage(int num) {
     if (totalHeight < height) {
         totalHeight = height;
     }
-    if (scene != EDIT && scene != EDITGAME && scene != EDITDEAD && scene != EDITINFO) {
+    if (!(scene == EDIT || scene == EDITGAME || scene == EDITDEAD || scene == EDITINFO) || firstEditLoad) {
         baseY = totalHeight - height;
+        firstEditLoad = false;
     }
     if (baseY < 0) {
         baseY = 0;
@@ -909,7 +915,7 @@ void loadStage(int num) {
     goal = new GoalItem(stage.getJSONObject("goal").getFloat("x"), totalHeight - stage.getJSONObject("goal").getFloat("y"));
     // platforms.add(new Platform(0, totalHeight - blockSize*6, width/blockSize));
     acid = new Acid(totalHeight - stage.getJSONObject("acid").getFloat("y"), stage.getJSONObject("acid").getFloat("vy"));
-    if (scene != EDIT && scene != EDITGAME && scene != EDITDEAD && scene != EDITINFO) {
+    if (!(scene == EDIT || scene == EDITGAME || scene == EDITDEAD || scene == EDITINFO)) {
         for (int i = 0; i < stage.getInt("starNum"); i++) {
             stars.add(new Star());
         }
@@ -1049,12 +1055,15 @@ void draw() {
         if (waitFrame > fps*3/2) {
             if (scene == GOAL) {
                 loadStage(stageNum);
+                pastScene = scene;
                 scene = GAME;
             } else if (scene == DEAD) {
                 loadStage(stageNum);
+                pastScene = scene;
                 scene = GAME;
             } else if (scene == EDITDEAD) {
                 loadStage(0);
+                pastScene = scene;
                 scene = EDIT;
             }
             waitFrame = 0;
@@ -1085,6 +1094,7 @@ void draw() {
             keyCoolCount = keyCoolFrame;
             if (selectedMainNum == 0) {
                 println("Play");
+                pastScene = scene;
                 scene = GAME;
                 stages = new ArrayList<JSONObject>(allStages);
                 maxStageNum = stages.size() - 1;
@@ -1092,6 +1102,7 @@ void draw() {
                 loadStage(stageNum);
             } else if (selectedMainNum == 1) {
                 println("Continue");
+                pastScene = scene;
                 scene = GAME;
                 stages = new ArrayList<JSONObject>(allStages);
                 maxStageNum = stages.size() - 1;
@@ -1099,15 +1110,18 @@ void draw() {
                 loadStage(stageNum);
             } else if (selectedMainNum == 2) {
                 println("Select");
+                pastScene = scene;
                 scene = MENU;
                 isFocusStages = false;
                 selectedJsonNum = 0;
             } else if (selectedMainNum == 3) {
                 println("New");
                 editingStage = new EditingStage(templateStage);
+                pastScene = scene;
                 scene = EDIT;
             } else if (selectedMainNum == 4) {
                 println("Select");
+                pastScene = scene;
                 scene = MENU;
                 isFocusStages = false;
                 selectedJsonNum = 0;
@@ -1178,17 +1192,20 @@ void draw() {
 
                 selectedJsonMenuNum = 0;
                 selectedStageMenuNum = 0;
+                pastScene = scene;
                 scene = STAGEMENU;
             } else {
                 selectedJsonName = jsonNames.get(selectedJsonNum);
                 println(selectedJsonName);
                 selectedJsonMenuNum = 0;
                 selectedStageMenuNum = 0;
+                pastScene = scene;
                 scene = STAGEMENU;
             }
         }
         if (keyCoolCount < 0 && keys[ESC]) {
             keyCoolCount = keyCoolFrame;
+            pastScene = scene;
             scene = MAIN;
         }
     }
@@ -1236,6 +1253,7 @@ void draw() {
             if (isFocusStages) {
                 if (selectedStageMenuNum == 0) {
                     println("Play");
+                    pastScene = scene;
                     scene = GAME;
                     stages.clear();
                     stages.add(stagess.getJSONObject(selectedJsonName).getJSONObject(selectedStageName));
@@ -1244,6 +1262,7 @@ void draw() {
                 } else if (selectedStageMenuNum == 1) {
                     println("Edit");
                     editingStage = new EditingStage(stagess.getJSONObject(selectedJsonName).getJSONObject(selectedStageName));
+                    pastScene = scene;
                     scene = EDIT;
                 } else if (selectedStageMenuNum == 2) {
                     println("Move");
@@ -1256,6 +1275,7 @@ void draw() {
                 if (selectedJsonMenuNum == 0) {
                     println("Play");
                     // loadStage(stageNum);
+                    pastScene = scene;
                     scene = GAME;
                     stages.clear();
                     JSONObject jsonObject = stagess.getJSONObject(selectedJsonName);
@@ -1275,6 +1295,7 @@ void draw() {
         }
         if (keyCoolCount < 0 && (keys[ESC])) {
             keyCoolCount = keyCoolFrame;
+            pastScene = scene;
             scene = MENU;
         }
     }
@@ -1300,8 +1321,10 @@ void draw() {
         if (keyCoolCount < 0 && (keys[ESC] || keys['P'] || keys['p'])) {
             keyCoolCount = keyCoolFrame;
             if (scene == GAME) {
+                pastScene = scene;
                 scene = PAUSE;
             } else if (scene == EDITGAME) {
+                pastScene = scene;
                 scene = EDIT;
             }
         }
@@ -1312,13 +1335,16 @@ void draw() {
     if (scene == PAUSE) {
         if (keyCoolCount < 0 && (keys[' '] || keys[32] || keys['P'] || keys['p'])) {
             keyCoolCount = keyCoolFrame;
+            pastScene = scene;
             scene = GAME;
         }
         if (keyCoolCount < 0 && keys[ESC]) {
             keyCoolCount = keyCoolFrame;
             if (selectedMainNum == 0 || selectedMainNum == 1) {
+                pastScene = scene;
                 scene = MAIN;
             } else if (selectedMainNum == 2 || selectedMainNum == 4) {
+                pastScene = scene;
                 scene = MENU;
                 isFocusStages = false;
                 selectedJsonNum = 0;
@@ -1329,11 +1355,13 @@ void draw() {
     if (scene == EDIT) {
         if (keyCoolCount < 0 && (keys[ENTER] || keys[RETURN] || keys[' '] || keys[32])) {
             keyCoolCount = keyCoolFrame;
-            editingStage.startPlayStage();
+            editingStage.reloadEditingStage();
+            pastScene = scene;
             scene = EDITGAME;
         }
         if (keyCoolCount < 0 && keys[ESC]) {
             keyCoolCount = keyCoolFrame;
+            pastScene = scene;
             scene = EDITINFO;
         }
         editingStage.collision();
@@ -1347,11 +1375,14 @@ void draw() {
     if (scene == EDITINFO) {
         if (keyCoolCount < 0 && (keys[ENTER] || keys[RETURN] || keys[' '] || keys[32])) {
             keyCoolCount = keyCoolFrame;
+            pastScene = scene;
             scene = EDIT;
         }
         if (keyCoolCount < 0 && keys[ESC]) {
             keyCoolCount = keyCoolFrame;
+            pastScene = scene;
             scene = MAIN;
+            firstEditLoad = true;
         }
     }
 
