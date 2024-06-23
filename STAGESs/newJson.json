@@ -1,0 +1,51 @@
+{
+  "newStage": {
+    "goal": {
+      "x": 400,
+      "y": 1000
+    },
+    "author": "name",
+    "platforms": [
+      {
+        "w": 40,
+        "x": 0,
+        "y": 120
+      },
+      {
+        "w": 10,
+        "x": 342,
+        "y": 408
+      },
+      {
+        "w": 10,
+        "x": 248,
+        "y": 748
+      }
+    ],
+    "difficulty": 0,
+    "acid": {
+      "x": 0.0,
+      "vy": 1,
+      "y": -800
+    },
+    "stageName": "template",
+    "bgColor": "#1f1f5f",
+    "width": 800,
+    "boostItems": [{
+      "x": 178,
+      "y": 386
+    }],
+    "movePlatforms": [],
+    "starNum": 8,
+    "height": 1200,
+    "player": {
+      "v": 3,
+      "g": 0.5,
+      "chargeTime": 0.5,
+      "x": 400,
+      "jumpCount": 1,
+      "y": 140,
+      "jump": 21
+    }
+  }
+}
