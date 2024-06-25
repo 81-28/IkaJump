@@ -1,54 +1,4 @@
 {
-  "test2": {
-    "goal": {
-      "x": 400,
-      "y": 600
-    },
-    "author": "8128",
-    "platforms": [
-      {
-        "w": 40,
-        "x": 0,
-        "y": 120
-      },
-      {
-        "w": 10,
-        "x": 20,
-        "y": 180
-      }
-    ],
-    "difficulty": 0,
-    "acid": {
-      "x": 0.0,
-      "vy": 1,
-      "y": -800
-    },
-    "stageName": "test2",
-    "bgColor": "#2f2f5f",
-    "width": 800,
-    "boostItems": [{
-      "x": 400,
-      "y": 240
-    }],
-    "movePlatforms": [{
-      "vx": 0.5,
-      "w": 5,
-      "x": 400,
-      "y": 480,
-      "rangeX": 800
-    }],
-    "starNum": 20,
-    "height": 800,
-    "player": {
-      "v": 3,
-      "g": 0.5,
-      "chargeTime": 0.5,
-      "x": 400,
-      "jumpCount": 1,
-      "y": 140,
-      "jump": 21
-    }
-  },
   "test3": {
     "goal": {
       "x": 400,
@@ -62,8 +12,8 @@
     }],
     "difficulty": 3,
     "acid": {
-      "x": 0.0,
       "vy": 1,
+      "x": 0,
       "y": -800
     },
     "stageName": "test3",
@@ -160,8 +110,8 @@
     ],
     "difficulty": 1,
     "acid": {
-      "x": 0.0,
       "vy": 1,
+      "x": 0,
       "y": -800
     },
     "stageName": "test1",
@@ -196,6 +146,56 @@
     ],
     "starNum": 8,
     "height": 2000,
+    "player": {
+      "v": 3,
+      "g": 0.5,
+      "chargeTime": 0.5,
+      "x": 400,
+      "jumpCount": 1,
+      "y": 140,
+      "jump": 21
+    }
+  },
+  "test4": {
+    "goal": {
+      "x": 400,
+      "y": 600
+    },
+    "author": "8128",
+    "platforms": [
+      {
+        "w": 40,
+        "x": 0,
+        "y": 120
+      },
+      {
+        "w": 10,
+        "x": 20,
+        "y": 180
+      }
+    ],
+    "difficulty": 0,
+    "acid": {
+      "vy": 1,
+      "x": 0,
+      "y": -800
+    },
+    "stageName": "test2",
+    "bgColor": "#2f2f5f",
+    "width": 800,
+    "boostItems": [{
+      "x": 400,
+      "y": 240
+    }],
+    "movePlatforms": [{
+      "vx": 0.5,
+      "w": 5,
+      "x": 400,
+      "y": 480,
+      "rangeX": 800
+    }],
+    "starNum": 20,
+    "height": 800,
     "player": {
       "v": 3,
       "g": 0.5,

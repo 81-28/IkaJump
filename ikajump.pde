@@ -60,6 +60,7 @@ final int EDIT = 8;
 final int EDITGAME = 9;
 final int EDITINFO = 10;
 final int EDITDEAD = 11;
+final int ITEMINFO = 12;
 int scene = MAIN;
 int pastScene = MAIN;
 
@@ -613,10 +614,12 @@ class EditingStage {
     String newBGColor = "";
     int newHeight = 0;
 
-    float acidY = -8000.0;
-    float acidVY = 1.0;
+    String acidY = "-8000.0";
+    String acidVY = "1.0";
 
     int stageInfoNum = 0;
+    int itemInfoNum = 0;
+    int itemInfoMax = 0;
 
     EditingStage(JSONObject stage) {
         this.nowStage = JSONObject.parse(stage.toString());
@@ -628,8 +631,8 @@ class EditingStage {
         newBGColor = nowStage.getString("bgColor").substring(1);
         newHeight = nowStage.getInt("height");
 
-        acidY = nowStage.getJSONObject("acid").getFloat("y");
-        acidVY = nowStage.getJSONObject("acid").getFloat("vy");
+        acidY = str(nowStage.getJSONObject("acid").getFloat("y"));
+        acidVY = str(nowStage.getJSONObject("acid").getFloat("vy"));
 
         // println("nowStage");
         // println(nowStage);
@@ -638,12 +641,23 @@ class EditingStage {
     void setInfo(char key) {
         String input = str(key);
         String nowString = "";
+        String pastString = "";
         switch (stageInfoNum) {
             case 0:
                 nowString = newJsonName;
+
+                if (key != ENTER || key != RETURN) {
+                    nowString += input;
+                    newJsonName = nowString;
+                }
                 break;
             case 1:
                 nowString = newStageName;
+
+                if (key != ENTER || key != RETURN) {
+                    nowString += input;
+                    newStageName = nowString;
+                }
                 break;
             case 2:
                 nowString = str(newStageDifficulty);
@@ -652,9 +666,17 @@ class EditingStage {
                 } else {
                     input = "";
                 }
+
+                nowString += input;
+                newStageDifficulty = int(nowString);
                 break;
             case 3:
                 nowString = newStageAuthor;
+
+                if (key != ENTER || key != RETURN) {
+                    nowString += input;
+                    newStageAuthor = nowString;
+                }
                 break;
             case 4:
                 nowString = newBGColor;
@@ -662,7 +684,11 @@ class EditingStage {
                     // 
                 } else {
                     input = "";
-                    
+                }
+
+                if (nowString.length() < 6) {
+                    nowString += input;
+                    newBGColor = nowString;
                 }
                 break;
             case 5:
@@ -672,51 +698,41 @@ class EditingStage {
                 } else {
                     input = "";
                 }
-                break;
-            case 6:
-                nowString = str(acidY);
-                if (('0' <= key && key <= '9') || key == '.' || key == '-') {
-                    // 
-                } else {
-                    input = "";
-                }
-                break;
-            case 7:
-                nowString = str(acidVY);
-                if (('0' <= key && key <= '9') || key == '.' || key == '-') {
-                    // 
-                } else {
-                    input = "";
-                }
-                break;
-        }
 
-        nowString += input;
-
-        switch (stageInfoNum) {
-            case 0:
-                newJsonName = nowString;
-                break;
-            case 1:
-                newStageName = nowString;
-                break;
-            case 2:
-                newStageDifficulty = int(nowString);
-                break;
-            case 3:
-                newStageAuthor = nowString;
-                break;
-            case 4:
-                newBGColor = nowString;
-                break;
-            case 5:
+                nowString += input;
                 newHeight = int(nowString);
                 break;
             case 6:
-                acidY = float(nowString);
+                nowString = acidY;
+                pastString = nowString;
+                if (('0' <= key && key <= '9') || key == '.' || key == '-') {
+                    // 
+                } else {
+                    input = "";
+                }
+
+                nowString += input;
+                if (!nowString.matches("-?[0-9]*\\.?[0-9]*")) {
+                    nowString = pastString;
+                    println("not match");
+                }
+                acidY = nowString;
                 break;
             case 7:
-                acidVY = float(nowString);
+                nowString = acidVY;
+                pastString = nowString;
+                if (('0' <= key && key <= '9') || key == '.' || key == '-') {
+                    // 
+                } else {
+                    input = "";
+                }
+
+                nowString += input;
+                if (!nowString.matches("-?[0-9]*\\.?[0-9]*")) {
+                    nowString = pastString;
+                    println("not match");
+                }
+                acidVY = nowString;
                 break;
         }
     }
@@ -725,63 +741,58 @@ class EditingStage {
         String nowString = "";
         switch (stageInfoNum) {
             case 0:
-                nowString = newJsonName;
+                newJsonName = newJsonName.substring(0, max(0, newJsonName.length()-1));
                 break;
             case 1:
-                nowString = newStageName;
+                newStageName = newStageName.substring(0, max(0, newStageName.length()-1));
                 break;
             case 2:
-                nowString = str(newStageDifficulty);
+                newStageDifficulty = int(str(newStageDifficulty).substring(0, max(0, str(newStageDifficulty).length()-1)));
                 break;
             case 3:
-                nowString = newStageAuthor;
+                newStageAuthor = newStageAuthor.substring(0, max(0, newStageAuthor.length()-1));
                 break;
             case 4:
-                nowString = newBGColor;
+                newBGColor = newBGColor.substring(0, max(0, newBGColor.length()-1));
                 break;
             case 5:
-                nowString = str(newHeight);
+                newHeight = int(str(newHeight).substring(0, max(0, str(newHeight).length()-1)));
                 break;
             case 6:
-                nowString = str(acidY);
+                acidY = acidY.substring(0, max(0, acidY.length()-1));
                 break;
             case 7:
-                nowString = str(acidVY);
+                acidVY = acidVY.substring(0, max(0, acidVY.length()-1));
                 break;
         }
+    }
 
-        if (nowString.length() > 0) {
-            nowString = nowString.substring(0, nowString.length()-1);
-        } else {
-            nowString = "";
+    void fixStageInfo() {
+        if (newJsonName.length() == 0) {
+            newJsonName = "newJson";
         }
-
-        switch (stageInfoNum) {
-            case 0:
-                newJsonName = nowString;
-                break;
-            case 1:
-                newStageName = nowString;
-                break;
-            case 2:
-                newStageDifficulty = int(nowString);
-                break;
-            case 3:
-                newStageAuthor = nowString;
-                break;
-            case 4:
-                newBGColor = nowString;
-                break;
-            case 5:
-                newHeight = int(nowString);
-                break;
-            case 6:
-                acidY = float(nowString);
-                break;
-            case 7:
-                acidVY = float(nowString);
-                break;
+        if (newStageName.length() == 0) {
+            newStageName = "newStage";
         }
+        if (!str(newStageDifficulty).matches("[0-9]+")) {
+            newStageDifficulty = nowStage.getInt("difficulty");
+        }
+        if (newStageAuthor.length() == 0) {
+            newStageAuthor = "unknown";
+        }
+        if (!newBGColor.matches("[0-9a-fA-F]{6}")) {
+            newBGColor = nowStage.getString("bgColor").substring(1);
+        }
+        if (!str(newHeight).matches("[0-9]+")) {
+            newHeight = nowStage.getInt("height");
+        }
+        if (!acidY.matches("-?[0-9]+\\.?[0-9]*")) {
+            acidY = str(nowStage.getJSONObject("acid").getFloat("y"));
+        }
+        if (!acidVY.matches("-?[0-9]+\\.?[0-9]*")) {
+            acidVY = str(nowStage.getJSONObject("acid").getFloat("vy"));
+        }
+        println("fixed");
     }
 
     void switchAddType() {
@@ -858,7 +869,7 @@ class EditingStage {
     void collision() {
         if (scene == EDIT) {
             if (selectedEditingItem.size() == 0) {
-                if (leftMousePressed) {
+                if (leftMousePressed || rightMousePressed) {
                     collisionXStart = nowStage.getJSONObject("player").getFloat("x")-blockSize;
                     collisionYStart = totalHeight - nowStage.getJSONObject("player").getFloat("y") - baseY - blockSize;
                     collisionXEnd = collisionXStart + ballSize;
@@ -964,8 +975,10 @@ class EditingStage {
                             return;
                         }
                     }
-                } else if (rightMousePressed) {
-                    if (selectedEditingItem.size() == 0) {
+                }
+                if (rightMousePressed) {
+                    if (selectedEditingItem.size() == 0 && keyCoolCount < 0) {
+                        keyCoolCount = keyCoolFrame;
                         if (addType.equals("platform")) {
                             JSONObject newAddItem = JSONObject.parse(templateItems.getJSONObject("platform").toString());
                             newAddItem.setFloat("x", mouseX);
@@ -1019,29 +1032,36 @@ class EditingStage {
                     rightCollisionXStart = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("rightCollisionXStart");
                     rightCollisionXEnd = selectedEditingItem.get(0).getJSONObject("colPos").getFloat("rightCollisionXEnd");
                     if (((collisionXStart <= mousePX && mousePX < collisionXEnd) || (leftCollisionXStart <= mousePX && mousePX < leftCollisionXEnd) || (rightCollisionXStart <= mousePX && mousePX < rightCollisionXEnd)) && collisionYStart <= mousePY && mousePY < collisionYEnd) {
-                        collisionXStart += mouseVX;
-                        collisionYStart += mouseVY;
-                        collisionXEnd += mouseVX;
-                        collisionYEnd += mouseVY;
-                        float meanCollisionX = (collisionXStart + collisionXEnd) / 2;
-                        if (meanCollisionX < 0) {
-                            collisionXStart += width;
-                            collisionXEnd += width;
-                            selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX+width);
-                        } else if (meanCollisionX >= width) {
-                            collisionXStart -= width;
-                            collisionXEnd -= width;
-                            selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX-width);
-                        } else {
-                            selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
-                        }
-                        selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")-mouseVY);
+                        if (leftMousePressed) {
+                            collisionXStart += mouseVX;
+                            collisionYStart += mouseVY;
+                            collisionXEnd += mouseVX;
+                            collisionYEnd += mouseVY;
+                            float meanCollisionX = (collisionXStart + collisionXEnd) / 2;
+                            if (meanCollisionX < 0) {
+                                collisionXStart += width;
+                                collisionXEnd += width;
+                                selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX+width);
+                            } else if (meanCollisionX >= width) {
+                                collisionXStart -= width;
+                                collisionXEnd -= width;
+                                selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX-width);
+                            } else {
+                                selectedEditingItem.get(0).setFloat("x", selectedEditingItem.get(0).getFloat("x")+mouseVX);
+                            }
+                            selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")-mouseVY);
 
-                        if (selectedEditingItem.get(0).getString("type").equals("acid")) {
-                            acidY = selectedEditingItem.get(0).getFloat("y");
-                        }
+                            if (selectedEditingItem.get(0).getString("type").equals("acid")) {
+                                acidY = str(selectedEditingItem.get(0).getFloat("y"));
+                            }
 
-                        setColPos();
+                            setColPos();
+                        } else if(keyCoolCount < 0){
+                            itemInfoNum = 0;
+                            itemInfoMax = selectedEditingItem.get(0).keys().size()-2;
+                            pastScene = scene;
+                            scene = ITEMINFO;
+                        }
                         return;
                     }
                     reloadEditingStage();
@@ -1051,11 +1071,13 @@ class EditingStage {
             gameCollision();
         } else if (scene == EDITINFO) {
             // 
+        } else if (scene == ITEMINFO) {
+            // 
         }
     }
 
     void display() {
-        if (scene == EDIT) {
+        if (scene == EDIT || scene == ITEMINFO) {
             stroke(0, 63);
             for (int y = 0; y < totalHeight; y+=blockSize) {
                 float drawY = y - baseY;
@@ -1155,6 +1177,7 @@ class EditingStage {
             }
             noStroke();
         }
+
         fill(0);
         textSize(10);
         textAlign(LEFT, CENTER);
@@ -1169,6 +1192,38 @@ class EditingStage {
             }
         }
         noStroke();
+
+        if (scene == ITEMINFO) {
+            fill(0, 127);
+            rect(0, 0, width, height);
+            fill(0);
+            rect(width/4, height/4, width/2, height/2);
+            fill(255, 0, 0);
+            textSize(40);
+            textAlign(CENTER, CENTER);
+            text("INFO", width/2, height/4+30);
+            textSize(20);
+            fill(255);
+            textAlign(LEFT, UP);
+            JSONObject selectedItem = JSONObject.parse(selectedEditingItem.get(0).toString());
+            selectedItem.remove("colPos");
+            selectedItem.remove("type");
+            // text(selectedItem.toString(), width/4+50, height/4+50);
+            ArrayList<String> keys = new ArrayList<String>(selectedItem.keys());
+            for (int i = 0; i < keys.size(); i++) {
+                String key = keys.get(i);
+                text(key + " : ", width/4+50, height/4+100+30*i);
+                if (key == "w" || key == "jumpCount") {
+                    int value = selectedItem.getInt(key);
+                    text(value, width/4+200, height/4+100+30*i);
+                } else {
+                    text(selectedItem.getFloat(key), width/4+200, height/4+100+30*i);
+                }
+            }
+            stroke(255, 255, 0);
+            line(width/4+40, height/4+110+30*itemInfoNum, width*3/4-40, height/4+110+30*itemInfoNum);
+            noStroke();
+        }
 
         textSize(20);
         fill(255);
@@ -1195,12 +1250,13 @@ class EditingStage {
                 nowStage.getJSONArray("movePlatforms").append(selectedItem);
             }
         }
+        fixStageInfo();
         nowStage.setInt("difficulty", newStageDifficulty);
         nowStage.setString("author", newStageAuthor);
         nowStage.setString("bgColor", "#" + newBGColor);
         nowStage.setInt("height", newHeight);
-        nowStage.getJSONObject("acid").setFloat("y", acidY);
-        nowStage.getJSONObject("acid").setFloat("vy", acidVY);
+        nowStage.getJSONObject("acid").setFloat("y", float(acidY));
+        nowStage.getJSONObject("acid").setFloat("vy", float(acidVY));
 
         stages.clear();
         stages.add(nowStage);
@@ -1237,12 +1293,13 @@ class EditingStage {
                 saveStage.getJSONArray("movePlatforms").append(selectedItem);
             }
         }
+        fixStageInfo();
         saveStage.setInt("difficulty", newStageDifficulty);
         saveStage.setString("author", newStageAuthor);
         saveStage.setString("bgColor", "#" + newBGColor);
         saveStage.setInt("height", newHeight);
-        saveStage.getJSONObject("acid").setFloat("y", acidY);
-        saveStage.getJSONObject("acid").setFloat("vy", acidVY);
+        saveStage.getJSONObject("acid").setFloat("y", float(acidY));
+        saveStage.getJSONObject("acid").setFloat("vy", float(acidVY));
 
         JSONObject fromJson = stagess.getJSONObject(selectedJsonName);
         JSONObject toJson = stagess.getJSONObject(newJsonName);
@@ -1271,7 +1328,7 @@ void loadStage(int num) {
     JSONArray movePlatformsJSON = stage.getJSONArray("movePlatforms");
     JSONArray boostItemsJSON = stage.getJSONArray("boostItems");
 
-    if (!(scene == EDIT || scene == EDITGAME || scene == EDITDEAD || scene == EDITINFO)) {
+    if (!(scene == EDIT || scene == EDITGAME || scene == EDITDEAD || scene == EDITINFO || scene == ITEMINFO)) {
         stars.clear();
     }
     platforms.clear();
@@ -1288,7 +1345,7 @@ void loadStage(int num) {
     if (totalHeight < height) {
         totalHeight = height;
     }
-    if (!(scene == EDIT || scene == EDITGAME || scene == EDITDEAD || scene == EDITINFO) || firstEditLoad) {
+    if (!(scene == EDIT || scene == EDITGAME || scene == EDITDEAD || scene == EDITINFO || scene == ITEMINFO) || firstEditLoad) {
         baseY = totalHeight - height;
         firstEditLoad = false;
     }
@@ -1309,7 +1366,7 @@ void loadStage(int num) {
     goal = new GoalItem(stage.getJSONObject("goal").getFloat("x"), totalHeight - stage.getJSONObject("goal").getFloat("y"));
     // platforms.add(new Platform(0, totalHeight - blockSize*6, width/blockSize));
     acid = new Acid(totalHeight - stage.getJSONObject("acid").getFloat("y"), stage.getJSONObject("acid").getFloat("vy"));
-    if (!(scene == EDIT || scene == EDITGAME || scene == EDITDEAD || scene == EDITINFO)) {
+    if (!(scene == EDIT || scene == EDITGAME || scene == EDITDEAD || scene == EDITINFO || scene == ITEMINFO)) {
         for (int i = 0; i < stage.getInt("starNum"); i++) {
             stars.add(new Star());
         }
@@ -1440,7 +1497,7 @@ void draw() {
     mouseVX = mouseX - mousePX;
     mouseVY = mouseY - mousePY;
 
-    if (scene == GAME || scene == GOAL || scene == DEAD || scene == PAUSE || scene == EDIT || scene == EDITGAME || scene == EDITDEAD || scene == EDITINFO) {
+    if (scene == GAME || scene == GOAL || scene == DEAD || scene == PAUSE || scene == EDIT || scene == EDITGAME || scene == EDITDEAD || scene == EDITINFO || scene == ITEMINFO) {
         background(gameBGColor);
     } else {
         background(bgColor);
@@ -1649,7 +1706,7 @@ void draw() {
             }
         }
 
-        // STAGEMENUで編集した場合、更新をする！！！
+        // STAGEMENUで編集した場合、loadで更新をする！！！
 
         if (keyCoolCount < 0 && (keys[ENTER] || keys[RETURN] || keys[' '] || keys[32])) {
             keyCoolCount = keyCoolFrame;
@@ -1847,6 +1904,10 @@ void draw() {
             pastScene = scene;
             scene = EDIT;
         }
+        if (keyCoolCount < 0 && keys[RIGHT]) {
+            keyCoolCount = keyCoolFrame;
+            editingStage.fixStageInfo();
+        }
         if (keyCoolCount < 0 && keys[ESC]) {
             keyCoolCount = keyCoolFrame;
             loadJSONs();
@@ -1859,6 +1920,31 @@ void draw() {
                 selectedJsonNum = 0;
             }
             firstEditLoad = true;
+        }
+    }
+    if (scene == ITEMINFO) {
+        if (keyCoolCount < 0 && (keys['W'] || keys['w'] || keys[UP])) {
+            keyCoolCount = keyCoolFrame;
+            editingStage.itemInfoNum--;
+            if (editingStage.itemInfoNum < 0) {
+                editingStage.itemInfoNum = editingStage.itemInfoMax;
+            } else if (editingStage.itemInfoNum >= editingStage.itemInfoMax) {
+                editingStage.itemInfoNum = 0;
+            }
+        }
+        if (keyCoolCount < 0 && (keys['S'] || keys['s'] || keys[DOWN])) {
+            keyCoolCount = keyCoolFrame;
+            editingStage.itemInfoNum++;
+            if (editingStage.itemInfoNum < 0) {
+                editingStage.itemInfoNum = editingStage.itemInfoMax;
+            } else if (editingStage.itemInfoNum >= editingStage.itemInfoMax) {
+                editingStage.itemInfoNum = 0;
+            }
+        }
+        if (keyCoolCount < 0 && keys[ESC]) {
+            keyCoolCount = keyCoolFrame;
+            pastScene = scene;
+            scene = EDIT;
         }
     }
 
@@ -2007,6 +2093,9 @@ void draw() {
         textSize(50);
         textAlign(CENTER, CENTER);
         text("MISS!", width/2, height/2);
+        editingStage.display();
+    }
+    if (scene == ITEMINFO) {
         editingStage.display();
     }
 
