@@ -178,14 +178,14 @@ void keyPressed() {
             key = 0;
         }
     }
-    if (scene == EDITINFO && key != CODED) {
+    if (scene == EDITINFO && !(key == CODED || key == ENTER || key == RETURN)) {
         if (key == BACKSPACE) {
             editingStage.deleteInfoString();
         } else {
             editingStage.setInfo(key);
         }
     }
-    if (scene == ITEMINFO && key != CODED) {
+    if (scene == ITEMINFO && !(key == CODED || key == ENTER || key == RETURN)) {
         if (key == BACKSPACE) {
             editingStage.deleteItemInfoString();
         } else {
@@ -654,19 +654,13 @@ class EditingStage {
         switch (stageInfoNum) {
             case 0:
                 nowString = newJsonName;
-
-                if (key != ENTER || key != RETURN) {
-                    nowString += input;
-                    newJsonName = nowString;
-                }
+                nowString += input;
+                newJsonName = nowString;
                 break;
             case 1:
                 nowString = newStageName;
-
-                if (key != ENTER || key != RETURN) {
-                    nowString += input;
-                    newStageName = nowString;
-                }
+                nowString += input;
+                newStageName = nowString;
                 break;
             case 2:
                 nowString = str(newStageDifficulty);
@@ -681,11 +675,8 @@ class EditingStage {
                 break;
             case 3:
                 nowString = newStageAuthor;
-
-                if (key != ENTER || key != RETURN) {
-                    nowString += input;
-                    newStageAuthor = nowString;
-                }
+                nowString += input;
+                newStageAuthor = nowString;
                 break;
             case 4:
                 nowString = newBGColor;
