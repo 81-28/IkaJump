@@ -97,12 +97,12 @@ void loadJSONs() {
                 String name = fileName.substring(0, fileName.length() - 5);
                 JSONObject jsonObject = loadJSONObject(filePath);
 
-                Set<String> keys = jsonObject.keys();
-                for (String key : keys) {
-                    // JSONObject originalStage = jsonObject.getJSONObject(key);
+                Set<String> indexes = jsonObject.keys();
+                for (String index : indexes) {
+                    // JSONObject originalStage = jsonObject.getJSONObject(index);
                     // JSONObject stage = JSONObject.parse(originalStage.toString());
-                    JSONObject stage = jsonObject.getJSONObject(key);
-                    stage.setString("stageName", key);
+                    JSONObject stage = jsonObject.getJSONObject(index);
+                    stage.setString("stageName", index);
                     loadedStages.add(stage);
                 }
 
@@ -803,19 +803,19 @@ class EditingStage {
         itemInfoMax = selectedItem.keys().size();
 
         itemInfoStrings.clear();
-        ArrayList<String> keys = new ArrayList<String>(selectedItem.keys());
-        for (int i = 0; i < keys.size(); i++) {
+        ArrayList<String> indexes = new ArrayList<String>(selectedItem.keys());
+        for (int i = 0; i < indexes.size(); i++) {
             ArrayList<String> stringPair = new ArrayList<String>();
-            String key = keys.get(i);
-            println(key);
+            String index = indexes.get(i);
+            println(index);
             String value;
-            if (key.equals("w") || key.equals("jumpCount")) {
-                value = str(selectedItem.getInt(key));
+            if (index.equals("w") || index.equals("jumpCount")) {
+                value = str(selectedItem.getInt(index));
                 println("int");
             } else {
-                value = str(selectedItem.getFloat(key));
+                value = str(selectedItem.getFloat(index));
             }
-            stringPair.add(key);
+            stringPair.add(index);
             stringPair.add(value);
             itemInfoStrings.add(stringPair);
         }
@@ -1842,9 +1842,9 @@ void draw() {
                     scene = GAME;
                     stages.clear();
                     JSONObject jsonObject = stagess.getJSONObject(selectedJsonName);
-                    Set<String> keys = jsonObject.keys();
-                    for (String key : keys) {
-                        stages.add(jsonObject.getJSONObject(key));
+                    Set<String> indexes = jsonObject.keys();
+                    for (String index : indexes) {
+                        stages.add(jsonObject.getJSONObject(index));
                     }
                     maxStageNum = stages.size() - 1;
                     stageNum = 0;
