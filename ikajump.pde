@@ -185,6 +185,13 @@ void keyPressed() {
             editingStage.setInfo(key);
         }
     }
+    if (scene == ITEMINFO && key != CODED) {
+        if (key == BACKSPACE) {
+            editingStage.deleteItemInfoString();
+        } else {
+            editingStage.setItemInfo(key);
+        }
+    }
 }
 
 void keyReleased() {
@@ -618,6 +625,8 @@ class EditingStage {
     String acidVY = "1.0";
 
     int stageInfoNum = 0;
+
+    ArrayList<ArrayList<String>> itemInfoStrings = new ArrayList<ArrayList<String>>();
     int itemInfoNum = 0;
     int itemInfoMax = 0;
 
@@ -786,13 +795,108 @@ class EditingStage {
         if (!str(newHeight).matches("[0-9]+")) {
             newHeight = nowStage.getInt("height");
         }
-        if (!acidY.matches("-?[0-9]+\\.?[0-9]*")) {
+        if (!acidY.matches("-?[0-9]+(\\.[0-9]+)?")) {
             acidY = str(nowStage.getJSONObject("acid").getFloat("y"));
         }
-        if (!acidVY.matches("-?[0-9]+\\.?[0-9]*")) {
+        if (!acidVY.matches("-?[0-9]+(\\.[0-9]+)?")) {
             acidVY = str(nowStage.getJSONObject("acid").getFloat("vy"));
         }
         println("fixed");
+    }
+
+    void reloadItemInfo(JSONObject selectedItem) {
+        selectedItem = JSONObject.parse(selectedItem.toString());
+        selectedItem.remove("colPos");
+        selectedItem.remove("type");
+        itemInfoNum = 0;
+        itemInfoMax = selectedItem.keys().size();
+
+        itemInfoStrings.clear();
+        ArrayList<String> keys = new ArrayList<String>(selectedItem.keys());
+        for (int i = 0; i < keys.size(); i++) {
+            ArrayList<String> stringPair = new ArrayList<String>();
+            String key = keys.get(i);
+            println(key);
+            String value;
+            if (key.equals("w") || key.equals("jumpCount")) {
+                value = str(selectedItem.getInt(key));
+                println("int");
+            } else {
+                value = str(selectedItem.getFloat(key));
+            }
+            stringPair.add(key);
+            stringPair.add(value);
+            itemInfoStrings.add(stringPair);
+        }
+        println(itemInfoStrings);
+    }
+
+    void setItemInfo(char key) {
+        String input = str(key);
+        String index = itemInfoStrings.get(itemInfoNum).get(0);
+        String pastString = itemInfoStrings.get(itemInfoNum).get(1);
+        String nowString = pastString;
+        if (index.equals("w") || index.equals("jumpCount")) {
+            if ('0' <= key && key <= '9') {
+                // 
+            } else {
+                input = "";
+            }
+            nowString += input;
+        } else {
+            if (('0' <= key && key <= '9') || key == '.' || key == '-') {
+                // 
+            } else {
+                input = "";
+            }
+            nowString += input;
+            if (!nowString.matches("-?[0-9]*\\.?[0-9]*")) {
+                nowString = pastString;
+                println("not match");
+            }
+        }
+        itemInfoStrings.get(itemInfoNum).set(1, nowString);
+    }
+
+    void deleteItemInfoString() {
+        String nowString = itemInfoStrings.get(itemInfoNum).get(1);
+        nowString = nowString.substring(0, max(0, nowString.length()-1));
+        itemInfoStrings.get(itemInfoNum).set(1, nowString);
+    }
+
+    void saveItemInfo() {
+        JSONObject selectedItem = selectedEditingItem.get(0);
+        for (int i = 0; i < itemInfoStrings.size(); i++) {
+            String index = itemInfoStrings.get(i).get(0);
+            String nowString = itemInfoStrings.get(i).get(1);
+            if (index.equals("w") || index.equals("jumpCount")) {
+                if (!nowString.matches("[0-9]+") || nowString.matches("0+")) {
+                    nowString = str(selectedItem.getInt(index));
+                }
+                itemInfoStrings.get(i).set(1, nowString);
+                selectedEditingItem.get(0).setInt(index, int(nowString));
+            } else {
+                if (!nowString.matches("-?[0-9]+(\\.[0-9]+)?")) {
+                    nowString = str(selectedItem.getFloat(index));
+                }
+                itemInfoStrings.get(i).set(1, nowString);
+                selectedEditingItem.get(0).setFloat(index, float(nowString));
+            }
+        }
+        JSONObject newSelectedItem = JSONObject.parse(selectedEditingItem.get(0).toString());
+        String type = newSelectedItem.getString("type");
+        if (type.equals("player") || type.equals("goal") || type.equals("boostItem")) {
+            collisionXStart = newSelectedItem.getFloat("x")-blockSize;
+            collisionYStart = totalHeight - newSelectedItem.getFloat("y") - baseY - blockSize;
+            collisionXEnd = collisionXStart + ballSize;
+            collisionYEnd = collisionYStart + ballSize;
+        } else if (type.equals("platform") || type.equals("movePlatform") || type.equals("acid")) {
+            collisionXStart = newSelectedItem.getFloat("x");
+            collisionYStart = totalHeight - newSelectedItem.getFloat("y") - baseY;
+            collisionXEnd = collisionXStart + blockSize*newSelectedItem.getInt("w");
+            collisionYEnd = collisionYStart + blockSize;
+        }
+        setColPos();
     }
 
     void switchAddType() {
@@ -818,6 +922,14 @@ class EditingStage {
     }
 
     void setColPos() {
+        float meanCollisionX = (collisionXStart + collisionXEnd) / 2;
+        if (meanCollisionX < 0) {
+            collisionXStart += width;
+            collisionXEnd += width;
+        } else if (meanCollisionX >= width) {
+            collisionXStart -= width;
+            collisionXEnd -= width;
+        }
         leftCollisionXStart = collisionXStart - width;
         leftCollisionXEnd = collisionXEnd - width;
         rightCollisionXStart = collisionXStart + width;
@@ -1051,14 +1163,13 @@ class EditingStage {
                             }
                             selectedEditingItem.get(0).setFloat("y", selectedEditingItem.get(0).getFloat("y")-mouseVY);
 
+                            setColPos();
+
                             if (selectedEditingItem.get(0).getString("type").equals("acid")) {
                                 acidY = str(selectedEditingItem.get(0).getFloat("y"));
                             }
-
-                            setColPos();
                         } else if(keyCoolCount < 0){
-                            itemInfoNum = 0;
-                            itemInfoMax = selectedEditingItem.get(0).keys().size()-2;
+                            reloadItemInfo(selectedEditingItem.get(0));
                             pastScene = scene;
                             scene = ITEMINFO;
                         }
@@ -1205,19 +1316,19 @@ class EditingStage {
             textSize(20);
             fill(255);
             textAlign(LEFT, UP);
-            JSONObject selectedItem = JSONObject.parse(selectedEditingItem.get(0).toString());
-            selectedItem.remove("colPos");
-            selectedItem.remove("type");
+            // JSONObject selectedItem = JSONObject.parse(selectedEditingItem.get(0).toString());
             // text(selectedItem.toString(), width/4+50, height/4+50);
-            ArrayList<String> keys = new ArrayList<String>(selectedItem.keys());
-            for (int i = 0; i < keys.size(); i++) {
-                String key = keys.get(i);
+            
+            for (int i = 0; i < itemInfoStrings.size(); i++) {
+                String key = itemInfoStrings.get(i).get(0);
+                String value;
                 text(key + " : ", width/4+50, height/4+100+30*i);
-                if (key == "w" || key == "jumpCount") {
-                    int value = selectedItem.getInt(key);
+                if (key.equals("w") || key.equals("jumpCount")) {
+                    value = itemInfoStrings.get(i).get(1);
                     text(value, width/4+200, height/4+100+30*i);
                 } else {
-                    text(selectedItem.getFloat(key), width/4+200, height/4+100+30*i);
+                    value = itemInfoStrings.get(i).get(1);
+                    text(value, width/4+200, height/4+100+30*i);
                 }
             }
             stroke(255, 255, 0);
@@ -1857,7 +1968,19 @@ void draw() {
             keyCoolCount = keyCoolFrame;
             editingStage.saveEditStage();
         }
-        if (keyCoolCount < 0 && (keys[ENTER] || keys[RETURN] || keys[' '] || keys[32])) {
+        if (keyCoolCount < 0 && (keys[ENTER] || keys[RETURN])) {
+            if (editingStage.selectedEditingItem.size() > 0){
+                editingStage.reloadItemInfo(editingStage.selectedEditingItem.get(0));
+                pastScene = scene;
+                scene = ITEMINFO;
+            } else {
+                keyCoolCount = keyCoolFrame;
+                editingStage.reloadEditingStage();
+                pastScene = scene;
+                scene = EDITGAME;
+            }
+        }
+        if (keyCoolCount < 0 && (keys[' '] || keys[32])) {
             keyCoolCount = keyCoolFrame;
             editingStage.reloadEditingStage();
             pastScene = scene;
@@ -1927,7 +2050,7 @@ void draw() {
             keyCoolCount = keyCoolFrame;
             editingStage.itemInfoNum--;
             if (editingStage.itemInfoNum < 0) {
-                editingStage.itemInfoNum = editingStage.itemInfoMax;
+                editingStage.itemInfoNum = editingStage.itemInfoMax-1;
             } else if (editingStage.itemInfoNum >= editingStage.itemInfoMax) {
                 editingStage.itemInfoNum = 0;
             }
@@ -1936,13 +2059,18 @@ void draw() {
             keyCoolCount = keyCoolFrame;
             editingStage.itemInfoNum++;
             if (editingStage.itemInfoNum < 0) {
-                editingStage.itemInfoNum = editingStage.itemInfoMax;
+                editingStage.itemInfoNum = editingStage.itemInfoMax-1;
             } else if (editingStage.itemInfoNum >= editingStage.itemInfoMax) {
                 editingStage.itemInfoNum = 0;
             }
         }
-        if (keyCoolCount < 0 && keys[ESC]) {
+        if (keyCoolCount < 0 && keys[RIGHT]) {
             keyCoolCount = keyCoolFrame;
+            editingStage.saveItemInfo();            
+        }
+        if (keyCoolCount < 0 && (keys[ESC] || keys[ENTER] || keys[RETURN])) {
+            keyCoolCount = keyCoolFrame;
+            editingStage.saveItemInfo();  
             pastScene = scene;
             scene = EDIT;
         }
