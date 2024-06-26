@@ -1969,6 +1969,7 @@ void draw() {
             editingStage.saveEditStage();
         }
         if (keyCoolCount < 0 && (keys[ENTER] || keys[RETURN])) {
+            keyCoolCount = keyCoolFrame;
             if (editingStage.selectedEditingItem.size() > 0){
                 editingStage.reloadItemInfo(editingStage.selectedEditingItem.get(0));
                 pastScene = scene;
